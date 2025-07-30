@@ -6,4 +6,5 @@ Installation guide for Artix Dinit and Arch Linux with BTRFS and EXT4 options (f
 
 Credits:
   https://github.com/Yustinia
+  
   Arch Linux documentation

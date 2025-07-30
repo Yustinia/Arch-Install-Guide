@@ -1,0 +1,144 @@
+————————————————————
+PREPARE NETWORK
+————————————————————
+
+iwctl
+
+————————————————————
+PARTITION DISK      #EXT4
+————————————————————
+
+cfdisk /dev/sda
+
+# /dev/sda1 = EFI/ESP
+# /dev/sda2 = SWAP
+# /dev/sda3 = ROOT
+# /dev/sda4 = HOME
+
+mkfs.fat -F 32 /dev/sda1
+fatlabel /dev/sda1 ESP
+
+mkfs.ext4 -L ROOT /dev/sda3
+mkfs.ext4 -L HOME /dev/sda4
+
+mkswap -L SWAP /dev/sda2
+
+————————————————————
+PARTITION + MOUNT      #BTRFS
+————————————————————
+
+cfdisk /dev/sda
+
+# /dev/sda1 = EFI/ESP
+# /dev/sda2 = BTRFS
+
+mkfs.fat -F 32 /dev/sda1
+fatlabel /dev/sda1 ESP
+
+mkfs.btrfs -L MAIN /dev/sda2
+mount /dev/sda2 /mnt        # Temporary Mount
+
+# Creating Subvolumes
+btrfs subvolume create /mnt/@           # ROOT
+btrfs subvolume create /mnt/@home       # HOME
+umount /mnt
+
+# zstd:1-15 to define compression rate (1=default, 15=max)
+mount -o noatime,compress=zstd,ssd,discard=async,space_cache=v2,subvol=@ /dev/sda2 /mnt     # ROOT mount
+mkdir -pv /mnt/home
+mount -o noatime,compress=zstd,ssd,discard=async,space_cache=v2,subvol=@home /dev/sda2 /mnt/home    # HOME mount
+mkdir -pv /mnt/boot
+mount /dev/sda1 /mnt/boot       # BOOT mount
+
+————————————————————
+SWAP FILE       # DO THIS AFTER FSTAB AND CHROOT IF NOT SWAP PARTITION
+————————————————————
+
+mkswap -U clear --size 4G --file /swapfile    # NON-BTRFS
+btrfs filesystem mkswapfile --size 4G --uuid clear /swapfile     # BTRFS
+swapon /swapfile    # Activates swapfile
+
+# /etc/fstab
+/swapfile none swap default 0 0
+
+————————————————————
+MOUNTING PARTITIONS     # For EXT4
+————————————————————
+
+mount /dev/sda3 /mnt
+mount --mkdir /dev/sda1 /mnt/boot
+mount --mkdir /dev/sda4 /mnt/home
+swapon /dev/sda2
+
+————————————————————
+INSTALLING BASE SYSTEM
+————————————————————
+
+# Install Base system
+pacstrap -K /mnt base linux-firmware linux base-devel efibootmgr grub networkmanager
+# Kernels: linux, linux-lts, linux-zen
+# Headers: linux-headers, linux-lts-headers, linux-zen-headers
+# Optional: amd/intel-ucode btrfs-progs pipewire pipewire-pulse pipewire-alsa wireplumber
+
+genfstab -U /mnt >> /mnt/etc/fstab
+
+arch-chroot /mnt
+
+————————————————————
+TIME ZONE
+————————————————————
+
+ln -sf /usr/share/zoneinfo/(CONTINENT)/(CITY) /etc/localtime
+hwclock --systohc
+
+# /etc/locale.gen
+# Find locale (en_US.UTF-8)
+
+locale-gen
+
+# /etc/locale.conf
+LANG=en_US.UTF-8
+
+# /etc/hostname
+# Set hostname
+
+# /etc/hosts
+127.0.0.1        localhost
+::1              localhost
+127.0.1.1        (myhostname).localdomain  (myhostname)
+
+————————————————————
+USER SETUP
+————————————————————
+
+passwd # Set root password
+
+useradd -m -G wheel -s /bin/bash (username)
+passwd (username)
+
+EDITOR=nano visudo # Uncomment wheel group
+
+————————————————————
+ENABLE SYSTEMCTL
+————————————————————
+
+systemctl enable NetworkManager
+systemctl start NetworkManager
+
+————————————————————
+GRUB BOOTLOADER
+————————————————————
+
+grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB
+grub-mkconfig -o /boot/grub/grub.cfg
+
+————————————————————
+ERROR PGP FIXES
+————————————————————
+
+timedatectl set-timezone CONTINENT/CITY
+timedatectl set-ntp true
+
+# pacman-key --refresh-keys     # May brick installation ISO, fills ram space
+pacman-key --init
+pacman-key --populate

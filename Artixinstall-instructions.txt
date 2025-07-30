@@ -1,0 +1,94 @@
+————————————————————————————
+PARTITIONING DISKS
+————————————————————————————
+
+cfdisk /dev/sda
+
+# /dev/sda1 = EFI/ESP
+# /dev/sda2 = SWAP
+# /dev/sda3 = ROOT
+# /dev/sda4 = HOME
+
+mkfs.fat -F 32 /dev/sda1
+fatlabel /dev/sda1 ESP
+
+mkfs.ext4 -L ROOT /dev/sda3
+mkfs.ext4 -L HOME /dev/sda4
+
+mkswap -L SWAP /dev/sda2
+
+————————————————————————————
+MOUNTING PARTITIONING
+————————————————————————————
+
+swapon /dev/sda2
+
+mount /dev/sda3 /mnt
+mount --mkdir /dev/sda1 /mnt/boot
+mount --mkdir /dev/sda4 /mnt/home
+
+————————————————————————————
+ENSURING CONNECTION
+————————————————————————————
+
+ping google.com
+dinitctl start ntpd
+
+————————————————————————————
+INSTALLING BASE SYSTEM
+————————————————————————————
+
+basestrap /mnt base base-devel dinit linux-firmware linux-zen linuz-zen-headers efibootmgr grub nano networkmanager networkmanager-dinit
+
+fstabgen -U /mnt >> /etc/fstab
+
+artix-chroot /mnt
+
+————————————————————————————
+TIME ZONE
+————————————————————————————
+
+ln -sf /usr/share/zoneinfo/(CONTINENT)/(CITY) /etc/localtime
+hwclock --systohc
+
+nano /etc/locale.gen # Find locale (en_US.UTF-8)
+
+locale.gen
+
+nano /etc/locale.conf
+
+LANG=en_US.UTF-8
+
+nano /etc/hosts
+
+127.0.0.1        localhost
+::1              localhost
+127.0.1.1        (myhostname).localdomain  (myhostname)
+
+————————————————————————————
+BOOTLOADER GRUB
+————————————————————————————
+
+grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB
+grub-mkconfig -o /boot/grub/grub.cfg
+
+————————————————————————————
+USERS
+————————————————————————————
+
+passwd # Enter root password
+
+useradd -m -G wheel -s /bin/bash (username)
+passwd (username)
+
+EDITOR=nano visudo # Uncomment wheel group
+
+nano /etc/hostname # Set hostname
+
+————————————————————————————
+REBOOT
+————————————————————————————
+
+exit
+umount -a
+reboot

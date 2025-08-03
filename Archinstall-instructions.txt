@@ -47,18 +47,9 @@ umount /mnt
 # zstd:1-15 to define compression rate (1=default, 15=max)
 mount -o noatime,compress=zstd,ssd,discard=async,space_cache=v2,subvol=@ /dev/sda2 /mnt     # ROOT mount
 mkdir -pv /mnt/home
-mount -o noatime,compress=zstd,ssd,discard=async,space_cache=v2,subvol=@home /dev/sda2 /mnt/home    # HOME mountt
+mount -o noatime,compress=zstd,ssd,discard=async,space_cache=v2,subvol=@home /dev/sda2 /mnt/home    # HOME mount
 mkdir -pv /mnt/boot
 mount /dev/sda1 /mnt/boot       # BOOT mount
-
-————————————————————
-SWAP FILE
-————————————————————
-
-mkdir -pv /mnt/swap
-
-mkswap -U clear --size 4G --file /mnt/swap/swapfile    # EXT4
-btrfs filesystem mkswapfile --size 4G --uuid clear /mnt/swap/swapfile     # BTRFS
 
 ————————————————————
 INSTALLING BASE SYSTEM
@@ -71,10 +62,40 @@ genfstab -U /mnt >> /mnt/etc/fstab
 
 arch-chroot /mnt
 
+————————————————————
+SWAP FILE
+————————————————————
+
+mkdir -pv /swap
+
+mkswap -U clear --size 4G --file /swap/swapfile    # EXT4
+btrfs filesystem mkswapfile --size 4G --uuid clear /swap/swapfile     # BTRFS
+
 swapon /swap/swapfile    # Activates swapfile
 
 # /etc/fstab
 /swap/swapfile none swap default 0 0
+
+————————————————————
+ZRAM GENERATOR
+————————————————————
+
+# Install zram-generator
+pacman -S --needed zram-generator
+
+mkdir -pv /etc/systemd/zram-generator.conf.d/
+
+# /etc/systemd/zram-generator.conf.d/zram.conf
+[zram0]
+zram-size = ram / 2
+compression-algorithm = zstd
+swap-priority = 100
+
+systemctl daemon-reexec && systemctl restart systemd-zram-setup@zram0.service
+
+# Verify zram and swap
+lsblk
+swapon --show
 
 ————————————————————
 TIME ZONE

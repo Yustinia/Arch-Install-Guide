@@ -1,162 +1,213 @@
-# Arch Install Guide
+# Arch Linux Installation Guide
 
-Arch Install Guide with BTRFS and EXT4 settings with necessary fixes
+This is a guide to manually install Arch Linux in both BTRFS and EXT4, alongside implement features like SWAP and ZRAM in a clean install. For you to make the flawless switch.
 
 ## PREPARE NETWORK
 
+Use the command **`iwctl`** for networks.
+
 ```
 iwctl
-station wlan0 connect (ssid)
-ping archlinx.org -c10
+station wlan0 connect {ssid}
+ping archlinux.org -c10
 ```
 
-## PARTITION and MOUNT for EXT4
+## PARTITION and MOUNT (EXT4)
+
+Use **`cfdisk {/dev/sdX}`** to interactively create your partitions.
 
 ```
-cfdisk /dev/sda
-
-# /dev/sda1 = EFI/ESP
-# /dev/sda2 = ROOT
-# /dev/sda3 = HOME
-
-mkfs.fat -F 32 /dev/sda1
-fatlabel /dev/sda1 ESP
-
-mkfs.ext4 -L ROOT /dev/sda2
-mkfs.ext4 -L HOME /dev/sda3
-
-mount /dev/sda2 /mnt
-mount --mkdir /dev/sda1 /mnt/boot
-mount --mkdir /dev/sda3 /mnt/home
+# /dev/sda1 = ESP/EFI | 1GB Type: EFI System
+# /dev/sda2 = ROOT | Type: Linux Filesystem
+# /dev/sda3 = HOME | Type: Linux Filesystem
+```
+Commands:
 
 ```
+mkfs.fat -F32 /dev/sda1 | BOOT partition
+fatlabel /dev/sda1 ESP | Labelling for clarity
 
-## PARTITION and MOUNT for BTRFS
+mkfs.ext4 -L ROOT /dev/sda2 | ROOT partition
+mkfs.ext4 -L HOME /dev/sda3 | HOME partition
+
+mount /dev/sda2 /mnt | mount ROOT
+mount --mkdir /dev/sda1 /mnt/boot | mount BOOT
+mount --mkdir /dev/sda3 /mnt/home | mount HOME
+```
+
+## PARTITION and MOUNT (BTRFS)
+
+Use **`cfdisk {/dev/sdX}`** to interactively create your partitions.
 
 ```
-cfdisk /dev/sda
+# /dev/sda1 = ESP/EFI | 1GB Type: EFI System
+# /dev/sda2 = BTRFS | Main partition
+```
 
-# /dev/sda1 = EFI/ESP
-# /dev/sda2 = BTRFS
+Commands:
 
-mkfs.fat -F 32 /dev/sda1
-fatlabel /dev/sda1 ESP
+```
+mkfs.fat -F32 /dev/sda1 | BOOT parition
+fatlabel /dev/sda1 ESP | Labelling for clarity
 
 mkfs.btrfs -L MAIN /dev/sda2
-mount /dev/sda2 /mnt
+mount /dev/sda2 /mnt | TEMPORARY MOUNT
 ```
 
-Creating Subvolumes
+### Creating Subvolumes (BTRFS)
+
+Here we will create our ROOT and HOME subvolumes.
+
 ```
-btrfs subvolume create /mnt/@
-btrfs subvolume create /mnt/@home
-btrfs subvolume create /mnt/@swap
+btrfs subvolume create /mnt/@ | ROOT
+btrfs subvolume create /mnt/@home | HOME
+umount /mnt
 ```
 
-zstd:1-15 to define compression (1=default 15=max)
+Afterwards, we mount the subvolumes and partitions.
+
 ```
-mount -o noatime,compress=zstd:5,ssd,discard=async,space_cache=v2,subvol=@ /dev/sda2 /mnt
-mkdir -pv /mnt/home
-mount -o noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=@home /dev/sda2 /mnt/home
-mkdir -pv /mnt/swap
-mount -o noatime,subvolume=@swap /dev/sda2 /mnt/swap
+mount -o noatime,compress=zstd,ssd,discard=async,space_cache=v2,subvol=@ /dev/sda2 /mnt | ROOT mount
+
+mkdir-pv /mnt/home
+mount -o noatime,compress=zstd,ssd,discard=async,space_cache=v2,subvol=@home /dev/sda2 /mnt/home | HOME mount
+
 mkdir -pv /mnt/boot
-mount /dev/sda1 /mnt/boot
+mount /dev/sda1 /mnt/boot | BOOT mount
 ```
 
-## SWAPFILE
+## INSTALLING THE BASE System
+
+We're going to use pacstrap to install the necessary packages for Arch.
 
 ```
-mkswap -U clear --size 4G --file /swap/swapfile
-btrfs filesystem mkswapfile --size 4G --uuid clear /swap/swapfile
-swapon /swap/swapfile
-```
+pacstrap -K /mnt base linux linux-firmware linux base-devel efibootmgr grub networkmanager btrfs-progs vim
 
-/etc/fstab
-```
-/swap/swapfile none swap default 0 0
-```
+genfstab -U /mnt >> /mnt/etc/fstab | Generates fstab
 
-## INSTALLING BASE SYSTEM
-
-```
-pacstrap -K /mnt base linux-firmware linux base-devel efibootmgr grub networkmanager btrfs-progs vim
-genfstab -U /mnt >> /mnt/etc/fstab
 arch-chroot /mnt
 ```
 
-## TIME ZONE
+## SWAP FILE
+
+This is important for hibernation/sleep/suspend.
 
 ```
-ln -sf /usr/share/zoneinfo/(continent)/(city) /etc/localtime
+mkdir -pv /SWAP
+
+# For EXT4
+mkswap -U clear --size 4G --file /swap/swapfile
+
+# For BTRFS
+btrfs filesystem mkswapfile --size 4G --uuid clear /swap/swapfile
+
+swapon /swap/swapfile | Activate swapfile
+```
+
+Inside **`/etc/fstab`** add **`/swap/swapfile none swap default 0 0`** at the bottom most part of the window and save the file.
+
+## ZRAM GENERATOR
+
+We install zram-generator first with **`sudo pacman -S --needed zram-generator`**.
+
+Then create a directory using **`mkdir -pv /etc/systemd/zram-generator.conf.d/`**.
+
+**`cd`** into the directory and execute **`touch zram.conf`**.
+
+Edit the file and add the following.
+
+```
+[zram0]
+zram-size = ram / 2
+compression-algorithm = zstd
+swap-priority = 100
+
+# Save the file
+
+sudo systemctl daemon-reexec && systemctl restart systemd-zram-setup@zram0.service
+```
+
+Verify zram and swap existence with **`lsblk`** or **`swapon --show`**.
+
+## TIME ZONE
+
+We assign the time zone of your country and set it as localtime.
+
+```
+ln -sf /usr/share/zoneinfo/{continent}/{city} /etc/localtime
 hwclock --systohc
 ```
 
-/etc/locale.gen
-Find your locale (en_US.UTF-8) then uncomment
+Next up we get our locale. In this guide I'm going to use *en_US.UTF-8*.
 
-`locale-gen`
+Inside **`/etc/locale.gen`**, find your locale.
 
-/etc/locale.conf
-`LANG=en_US.UTF-8`
+**`en_US.UTF-8`** Remove the comment (#) before it and save.
 
-/etc/hostname
-Give your hostname
+Run **`locale-gen`** to generate the chosen locale.
 
-/etc/hosts
+Inside **`/etc/locale.conf`**, add **`LANG=en_US.UTF-8`** or the locale that you chose and save
+
+Inside **`/etc/hostname`**, give your device your desired hostname (it can be anything). I will use *HPArch* for this.
+
+Then in **`/etc/hosts`** add the following.
+
 ```
-127.0.0.1 localhost
-::1       localhost
-127.0.1.1 (hostname).localdomain (hostname)
+127.0.0.1   localhost
+::11        localhost
+127.0.1.1   HPArch.localdomain  HPArch
 ```
 
 ## USER SETUP
 
-Set Root Password
-`passwd`
+Give you root user a password with **`passwd`**.
 
-Users
-```
-useradd -m -G wheel -s /bin/bash (username)
-passwd (username)
-```
+Then create your user account with **`useradd -m -G wheel -s /bin/bash {name}`**.
 
-Uncomment wheel group
-`EDITOR=vim visudo`
+Give the user account a password with **`passwd {user}`**.
+
+With **`EDITOR=vim visudo`** (or any text editor you downloaded), uncomment the wheel group.
+
+**`%wheel ALL=(ALL:ALL) ALL`**.
 
 ## SYSTEMCTL
 
-```
-systemctl enable networkmanager
-```
+Let's enable the network manager for wireless connectivity.
 
-## GRUB
+**`systemctl enable NetworkManager`**
+
+## GRUB BOOTLOADER
+
+Now we install the bootloader for our system.
 
 ```
-grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB
+grub-install --target=x86_64-efi --efi-directory=/boot --bootloaderid=GRUB
+
 grub-mkconfig -o /boot/grub/grub.cfg
 ```
 
 ## FINAL PREPARATION
 
-If BTRFS
-/etc/mkinitcpio.conf
-```
-MODULES=(btrfs)
-mkinitcpio -P
-```
+If you used BTRFS, you must do this.
 
-/etc/default/grub
+In **`/etc/mkinitcpio.conf`**.
+
+Add **`btrfs`** inside the parentehses of **`MODULES`**. Save it and proceed with **`mkinitcpio -P`**.
+
+Inside **`/etc/default/grub`**.
+
 ```
-GRUB_TIMEOUT=(preference)
+GRUB_TIMEOUT={seconds}
 GRUB_DEFAULT=saved
-GRUB_SAVEDEFAULT=true
-GRUB_DISABLE_SUBMENU=y
+GRUB_SAVEDEFAULT=true | Remove comment
+GRUB_DISABLE_SUBMENU=y | Remove comment
+
+# Save the regenerate config
 
 grub-mkconfig -o /boot/grub/grub.cfg
 ```
 
-## ERROR PGP FIXES
+### ERROR PGP FIXES
 
 ```
 pacman-key --init
@@ -165,26 +216,43 @@ pacman-key --populate
 
 ### EXTRAS
 
-Kernels: linux linux-lts linux-zen linux-cachyos # Cachy repos must be added before installing cachy related pkgs
-Headers: linux-headers linux-lts-headers linux-zen-headers linux-cachyos-headers
-Hardware: amd-ucode intel-ucode
-Audio: pipewire pipewire-pulse pipewire-alsa wireplumber
-Optional: fastfetch btop reflector vim neovim nano
 
-`sudo reflector -p https -f 8 --sort rate -c "countries" --save /etc/pacman.d/mirrorlist`
+Kernels: `linux linux-lts linux-zen linux-cachyos` | Cachy repos must be added first for Cachy related pkgs
 
-### FIX RTL8852BE WIFI (POST INSTALL)
+Headers: `linux-headers linux-lts-headers linux-zen-headers linux-cachyos-headers`
+
+Hardware: `amd/intel-ucode`
+
+Audio: `pipewire pipewire-pulse pipewire-alsa wireplumber`
+
+Optional: `fastfetch btop reflector vim nvim nano`
+
+Update mirrorlist: `sudo reflector -p https -f 8 --sort rate -c "(countries)" --save /etc/pacman.d/mirrorlist`
+
+### FIX RTW89 WIFI
 
 ```
 yay -S --needed rtw89-dkms-git power-profiles-daemon
 
-sudo systemctl enable --now power-profiles-daemon.service
-powerprofilesctl set performance
+systemctl enable --now power-profiles-daemon.service
+powerprofilesctl list   # List available profiles
+powerprofilesctl set    # Set profile
 ```
 
-Add this parameter `pcie_aspm=off` in /etc/default/grub `GRUB_CMDLINE_LINUX_DEFAULT`
+Inside **`/etc/NetworkManager/conf.d/00-wifi-powersave.conf`** add
 
-/etc/modprobe.d/rtw89.conf
+```
+[connection]
+wifi.powersave = 2
+```
+
+**`/etc/default/grub`**
+```
+GRUB_CMDLINE_LINUX_DEFAULT="pcie_aspm=off" | Add this parameter
+```
+
+**`/etc/modprobe.d/rtw89.conf`**
+
 ```
 options rtw89_core_git debug_mask=0x0
 options rtw89_core_git disable_ps_mode=y
@@ -194,10 +262,8 @@ options rtw89_pci_git disable_aspm_l1=y
 options rtw89_pci_git disable_aspm_l1ss=y
 
 options rtw89_usb_git switch_usb_mode=y
-```
 
-Blacklist the in-kernel rtw89 drivers
-```
+# Blacklist the in-kernel rtw89 drivers
 blacklist rtw89_8851bu
 blacklist rtw89_8851be
 blacklist rtw89_8851b

@@ -5,23 +5,24 @@ PREPARE NETWORK
 iwctl
 
 ————————————————————
-PARTITION DISK      #EXT4
+PARTITION + MOUNT       #EXT4
 ————————————————————
 
 cfdisk /dev/sda
 
 # /dev/sda1 = EFI/ESP
-# /dev/sda2 = SWAP
-# /dev/sda3 = ROOT
-# /dev/sda4 = HOME
+# /dev/sda2 = ROOT
+# /dev/sda3 = HOME
 
 mkfs.fat -F 32 /dev/sda1
 fatlabel /dev/sda1 ESP
 
-mkfs.ext4 -L ROOT /dev/sda3
-mkfs.ext4 -L HOME /dev/sda4
+mkfs.ext4 -L ROOT /dev/sda2
+mkfs.ext4 -L HOME /dev/sda3
 
-mkswap -L SWAP /dev/sda2
+mount /dev/sda2 /mnt
+mount --mkdir /dev/sda1 /mnt/boot
+mount --mkdir /dev/sda3 /mnt/home
 
 ————————————————————
 PARTITION + MOUNT      #BTRFS
@@ -41,44 +42,35 @@ mount /dev/sda2 /mnt        # Temporary Mount
 # Creating Subvolumes
 btrfs subvolume create /mnt/@           # ROOT
 btrfs subvolume create /mnt/@home       # HOME
+btrfs subvolume create /mnt/@swap       # SWAP SUBVOL
 umount /mnt
 
 # zstd:1-15 to define compression rate (1=default, 15=max)
 mount -o noatime,compress=zstd,ssd,discard=async,space_cache=v2,subvol=@ /dev/sda2 /mnt     # ROOT mount
 mkdir -pv /mnt/home
 mount -o noatime,compress=zstd,ssd,discard=async,space_cache=v2,subvol=@home /dev/sda2 /mnt/home    # HOME mount
+mkdir -pv /mnt/swap
+mount -o noatime,subvol=@swap /dev/sda2 /mnt/swap   # SWAP mount
 mkdir -pv /mnt/boot
 mount /dev/sda1 /mnt/boot       # BOOT mount
 
 ————————————————————
-SWAP FILE       # DO THIS AFTER FSTAB AND CHROOT IF NOT SWAP PARTITION
+SWAP FILE
 ————————————————————
 
-mkswap -U clear --size 4G --file /swapfile    # NON-BTRFS
-btrfs filesystem mkswapfile --size 4G --uuid clear /swapfile     # BTRFS
-swapon /swapfile    # Activates swapfile
+mkswap -U clear --size 4G --file /swap/swapfile    # EXT4
+btrfs filesystem mkswapfile --size 4G --uuid clear /swap/swapfile     # BTRFS
+swapon /swap/swapfile    # Activates swapfile
 
 # /etc/fstab
-/swapfile none swap default 0 0
-
-————————————————————
-MOUNTING PARTITIONS     # For EXT4
-————————————————————
-
-mount /dev/sda3 /mnt
-mount --mkdir /dev/sda1 /mnt/boot
-mount --mkdir /dev/sda4 /mnt/home
-swapon /dev/sda2
+/swap/swapfile none swap default 0 0
 
 ————————————————————
 INSTALLING BASE SYSTEM
 ————————————————————
 
 # Install Base system
-pacstrap -K /mnt base linux-firmware linux base-devel efibootmgr grub networkmanager
-# Kernels: linux, linux-lts, linux-zen
-# Headers: linux-headers, linux-lts-headers, linux-zen-headers
-# Optional: amd/intel-ucode btrfs-progs pipewire pipewire-pulse pipewire-alsa wireplumber
+pacstrap -K /mnt base linux-firmware linux base-devel efibootmgr grub networkmanager btrfs-progs vim
 
 genfstab -U /mnt >> /mnt/etc/fstab
 
@@ -100,12 +92,12 @@ locale-gen
 LANG=en_US.UTF-8
 
 # /etc/hostname
-# Set hostname
+# Give hostname
 
 # /etc/hosts
 127.0.0.1        localhost
 ::1              localhost
-127.0.1.1        (myhostname).localdomain  (myhostname)
+127.0.1.1        (hostname).localdomain  (hostname)
 
 ————————————————————
 USER SETUP
@@ -116,10 +108,10 @@ passwd # Set root password
 useradd -m -G wheel -s /bin/bash (username)
 passwd (username)
 
-EDITOR=nano visudo # Uncomment wheel group
+EDITOR=vim visudo # Uncomment wheel group
 
 ————————————————————
-ENABLE SYSTEMCTL
+SYSTEMCTL
 ————————————————————
 
 systemctl enable NetworkManager
@@ -133,12 +125,92 @@ grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB
 grub-mkconfig -o /boot/grub/grub.cfg
 
 ————————————————————
+FINAL PREPARATION
+————————————————————
+
+# If BTRFS
+# /etc/mkinitcpio.conf
+MODULES=(btrfs)
+
+mkinitcpio -P
+
+# /etc/default/grub
+GRUB_TIMEOUT=(preference)
+GRUB_DEFAULT=saved
+GRUB_SAVEDEFAULT=true   # Uncomment
+GRUB_DISABLE_SUBMENU=y  # Uncomment
+
+grub-mkconfig -o /boot/grub/grub.cfg
+
+————————————————————
 ERROR PGP FIXES
 ————————————————————
 
 timedatectl set-timezone CONTINENT/CITY
 timedatectl set-ntp true
 
-# pacman-key --refresh-keys     # May brick installation ISO, fills ram space
+# pacman-key --refresh-keys     # May brick installation ISO if limited RAM
 pacman-key --init
 pacman-key --populate
+
+————————————————————
+EXTRAS
+————————————————————
+
+Kernels: linux linux-lts linux-zen linux-cachyos        # Cachy repos must be added first for Cachy related pkgs
+Headers: linux-headers linux-lts-headers linux-zen-headers linux-cachyos-headers
+Hardware: amd/intel-ucode
+Audio: pipewire pipewire-pulse pipewire-alsa wireplumber
+Optional: fastfetch btop reflector vim nvim nano
+
+sudo reflector -p https -f 8 --sort rate -c "(countries)" --save /etc/pacman.d/mirrorlist
+
+————————————————————
+FIX RTL8852BE WIFI (POST INSTALL)
+————————————————————
+
+yay -S --needed rtw89-dkms-git power-profiles-daemon
+
+systemctl enable --now power-profiles-daemon.service
+powerprofilesctl list   # List available profiles
+powerprofilesctl set    # Set profile
+
+# /etc/NetworkManager/conf.d/00-wifi-powersave.conf
+[connection]
+wifi.powersave = 2
+
+# /etc/modprobe.d/rtw89.conf
+    options rtw89_core_git debug_mask=0x0
+    options rtw89_core_git disable_ps_mode=y
+
+    options rtw89_pci_git disable_clkreq=y
+    options rtw89_pci_git disable_aspm_l1=y
+    options rtw89_pci_git disable_aspm_l1ss=y
+
+    options rtw89_usb_git switch_usb_mode=y
+
+    # Blacklist the in-kernel rtw89 drivers
+    blacklist rtw89_8851bu
+    blacklist rtw89_8851be
+    blacklist rtw89_8851b
+    blacklist rtw89_8852au
+    blacklist rtw89_8852ae
+    blacklist rtw89_8852a
+    blacklist rtw89_8852b_common
+    blacklist rtw89_8852bu
+    blacklist rtw89_8852be
+    blacklist rtw89_8852b
+    blacklist rtw89_8852bte
+    blacklist rtw89_8852bt
+    blacklist rtw89_8852cu
+    blacklist rtw89_8852ce
+    blacklist rtw89_8852c
+    blacklist rtw89_8922au
+    blacklist rtw89_8922ae
+    blacklist rtw89_8922a
+    blacklist rtw89_core
+    blacklist rtw89_usb
+    blacklist rtw89_pci
+
+mkinitcpio -P
+grub-mkconfig -o /boot/grub/grub.cfg

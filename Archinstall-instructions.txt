@@ -179,6 +179,9 @@ powerprofilesctl set    # Set profile
 [connection]
 wifi.powersave = 2
 
+# /etc/default/grub
+GRUB_CMDLINE_LINUX_DEFAULT="pcie_aspm=off"  # Add this parameter
+
 # /etc/modprobe.d/rtw89.conf
     options rtw89_core_git debug_mask=0x0
     options rtw89_core_git disable_ps_mode=y

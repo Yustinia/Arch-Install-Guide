@@ -1,6 +1,6 @@
 # Arch Install Guide
 
-> Arch Install Guide with BTRFS and EXT4 settings with necessary fixes
+Arch Install Guide with BTRFS and EXT4 settings with necessary fixes
 
 ## PREPARE NETWORK
 
@@ -46,14 +46,14 @@ mkfs.btrfs -L MAIN /dev/sda2
 mount /dev/sda2 /mnt
 ```
 
-> Creating Subvolumes
+Creating Subvolumes
 ```
 btrfs subvolume create /mnt/@
 btrfs subvolume create /mnt/@home
 btrfs subvolume create /mnt/@swap
 ```
 
-> zstd:1-15 to define compression (1=default 15=max)
+zstd:1-15 to define compression (1=default 15=max)
 ```
 mount -o noatime,compress=zstd:5,ssd,discard=async,space_cache=v2,subvol=@ /dev/sda2 /mnt
 mkdir -pv /mnt/home
@@ -72,7 +72,7 @@ btrfs filesystem mkswapfile --size 4G --uuid clear /swap/swapfile
 swapon /swap/swapfile
 ```
 
-> /etc/fstab
+/etc/fstab
 ```
 /swap/swapfile none swap default 0 0
 ```
@@ -93,18 +93,18 @@ ln -sf /usr/share/zoneinfo/(continent)/(city) /etc/localtime
 hwclock --systohc
 ```
 
-> /etc/locale.gen
-> Find your locale (en_US.UTF-8) then uncomment
+/etc/locale.gen
+Find your locale (en_US.UTF-8) then uncomment
 
 `locale-gen`
 
-> /etc/locale.conf
+/etc/locale.conf
 `LANG=en_US.UTF-8`
 
-> /etc/hostname
-> Give your hostname
+/etc/hostname
+Give your hostname
 
-> /etc/hosts
+/etc/hosts
 ```
 127.0.0.1 localhost
 ::1       localhost
@@ -113,16 +113,16 @@ hwclock --systohc
 
 ## USER SETUP
 
-> Set Root Password
+Set Root Password
 `passwd`
 
-> Users
+Users
 ```
 useradd -m -G wheel -s /bin/bash (username)
 passwd (username)
 ```
 
-> Uncomment wheel group
+Uncomment wheel group
 `EDITOR=vim visudo`
 
 ## SYSTEMCTL
@@ -140,14 +140,14 @@ grub-mkconfig -o /boot/grub/grub.cfg
 
 ## FINAL PREPARATION
 
-> If BTRFS
-> /etc/mkinitcpio.conf
+If BTRFS
+/etc/mkinitcpio.conf
 ```
 MODULES=(btrfs)
 mkinitcpio -P
 ```
 
-> /etc/default/grub
+/etc/default/grub
 ```
 GRUB_TIMEOUT=(preference)
 GRUB_DEFAULT=saved
@@ -183,7 +183,7 @@ sudo systemctl enable --now power-profiles-daemon.service
 powerprofilesctl set performance
 ```
 
-> /etc/modprobe.d/rtw89.conf
+/etc/modprobe.d/rtw89.conf
 ```
 options rtw89_core_git debug_mask=0x0
 options rtw89_core_git disable_ps_mode=y
@@ -195,7 +195,7 @@ options rtw89_pci_git disable_aspm_l1ss=y
 options rtw89_usb_git switch_usb_mode=y
 ```
 
-> Blacklist the in-kernel rtw89 drivers
+Blacklist the in-kernel rtw89 drivers
 ```
 blacklist rtw89_8851bu
 blacklist rtw89_8851be

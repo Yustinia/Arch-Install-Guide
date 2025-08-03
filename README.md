@@ -182,6 +182,8 @@ sudo systemctl enable --now power-profiles-daemon.service
 powerprofilesctl set performance
 ```
 
+Add this parameter `pcie_aspm=off` in /etc/default/grub `GRUB_CMDLINE_LINUX_DEFAULT`
+
 /etc/modprobe.d/rtw89.conf
 ```
 options rtw89_core_git debug_mask=0x0

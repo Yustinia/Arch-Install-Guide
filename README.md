@@ -79,7 +79,6 @@ swapon /swap/swapfile
 
 ## INSTALLING BASE SYSTEM
 
-> Install Base System
 ```
 pacstrap -K /mnt base linux-firmware linux base-devel efibootmgr grub networkmanager btrfs-progs vim
 genfstab -U /mnt >> /mnt/etc/fstab

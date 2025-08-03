@@ -42,15 +42,12 @@ mount /dev/sda2 /mnt        # Temporary Mount
 # Creating Subvolumes
 btrfs subvolume create /mnt/@           # ROOT
 btrfs subvolume create /mnt/@home       # HOME
-btrfs subvolume create /mnt/@swap       # SWAP SUBVOL
 umount /mnt
 
 # zstd:1-15 to define compression rate (1=default, 15=max)
 mount -o noatime,compress=zstd,ssd,discard=async,space_cache=v2,subvol=@ /dev/sda2 /mnt     # ROOT mount
 mkdir -pv /mnt/home
-mount -o noatime,compress=zstd,ssd,discard=async,space_cache=v2,subvol=@home /dev/sda2 /mnt/home    # HOME mount
-mkdir -pv /mnt/swap
-mount -o noatime,subvol=@swap /dev/sda2 /mnt/swap   # SWAP mount
+mount -o noatime,compress=zstd,ssd,discard=async,space_cache=v2,subvol=@home /dev/sda2 /mnt/home    # HOME mountt
 mkdir -pv /mnt/boot
 mount /dev/sda1 /mnt/boot       # BOOT mount
 
@@ -58,12 +55,10 @@ mount /dev/sda1 /mnt/boot       # BOOT mount
 SWAP FILE
 ————————————————————
 
-mkswap -U clear --size 4G --file /swap/swapfile    # EXT4
-btrfs filesystem mkswapfile --size 4G --uuid clear /swap/swapfile     # BTRFS
-swapon /swap/swapfile    # Activates swapfile
+mkdir -pv /mnt/swap
 
-# /etc/fstab
-/swap/swapfile none swap default 0 0
+mkswap -U clear --size 4G --file /mnt/swap/swapfile    # EXT4
+btrfs filesystem mkswapfile --size 4G --uuid clear /mnt/swap/swapfile     # BTRFS
 
 ————————————————————
 INSTALLING BASE SYSTEM
@@ -75,6 +70,11 @@ pacstrap -K /mnt base linux-firmware linux base-devel efibootmgr grub networkman
 genfstab -U /mnt >> /mnt/etc/fstab
 
 arch-chroot /mnt
+
+swapon /swap/swapfile    # Activates swapfile
+
+# /etc/fstab
+/swap/swapfile none swap default 0 0
 
 ————————————————————
 TIME ZONE

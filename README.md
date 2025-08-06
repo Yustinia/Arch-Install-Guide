@@ -93,15 +93,16 @@ arch-chroot /mnt
 This is important for hibernation/sleep/suspend.
 
 ```
+# EXT4
 mkdir -pv /SWAP
-
-# For EXT4
 mkswap -U clear --size 4G --file /swap/swapfile
 
-# For BTRFS
+# BTRFS
+btrfs subvolume create /swap
 btrfs filesystem mkswapfile --size 4G --uuid clear /swap/swapfile
+lsattr /swap/swapfile | Check for "C"
 
-swapon /swap/swapfile | Activate swapfile
+swapon /swap/swapfile | Activate swapfile if not yet activated
 ```
 
 Inside **`/etc/fstab`** add **`/swap/swapfile none swap default 0 0`** at the bottom most part of the window and save the file.

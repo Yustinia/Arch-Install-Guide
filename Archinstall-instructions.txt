@@ -66,12 +66,16 @@ arch-chroot /mnt
 SWAP FILE
 ————————————————————
 
+# EXT4
 mkdir -pv /swap
+mkswap -U clear --size 4G --file /swap/swapfile
 
-mkswap -U clear --size 4G --file /swap/swapfile    # EXT4
-btrfs filesystem mkswapfile --size 4G --uuid clear /swap/swapfile     # BTRFS
+# BTRFS
+btrfs subvolume create /swap
+btrfs filesystem mkswapfile --size 4G --uuid clear /swap/swapfile
+lsattr /swap/swapfile   # Check for "C"
 
-swapon /swap/swapfile    # Activates swapfile
+swapon /swap/swapfile    # If not activated yet
 
 # /etc/fstab
 /swap/swapfile none swap default 0 0

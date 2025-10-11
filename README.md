@@ -67,16 +67,23 @@ Then we will create our subvolumes.
 ```bash
 btrfs subvolume create /mnt/@ # ROOT
 btrfs subvolume create /mnt/@home # HOME
+btrfs subvolume create /mnt/@var_log
+btrfs subvolume create /mnt/@var_cache
+btrfs subvolume create /mnt/@var_tmp
+btrfs subvolume create /mnt/@tmp
 umount /mnt
 ```
 
 After creating, we mount the subvolumes. Additionally, you can define zstd compression with `compress=zstd:1` through `compress=zstd:15`. Keep in mind that every other subvolume **will** adopt that zstd compression.
 
 ```bash
-mount -o noatime,compress=zstd,ssd,discard=async,space_cache=v2,subvol=@ /dev/sda2 /mnt # ROOT Mount
+mount -o noatime,compress=zstd,ssd,discard=async,space_cache=v2,subvol=@ /dev/sda2 /mnt
 
-mkdir -pv /mnt/home
-mount -o noatime,compress=zstd,ssd,discard=async,space_cache=v2,subvol=@home /dev/sda2 /mnt/home # HOME Mount
+mount --mkdir -o noatime,compress=zstd,ssd,discard=async,space_cache=v2,subvol=@home /dev/sda2 /mnt/home
+mount --mkdir -o noatime,compress=zstd,ssd,discard=async,space_cache=v2,subvol=@var_log /dev/sda2 /mnt/var/log
+mount --mkdir -o noatime,compress=zstd,ssd,discard=async,space_cache=v2,subvol=@var_cache /dev/sda2 /mnt/var/cache
+mount --mkdir -o noatime,compress=zstd,ssd,discard=async,space_cache=v2,subvol=@var_tmp /dev/sda2 /mnt/var/tmp
+mount --mkdir -o noatime,compress=zstd,ssd,discard=async,space_cache=v2,subvol=@tmp /dev/sda2 /mnt/tmp
 
 mkdir -pv /mnt/boot
 mount /dev/sda1 /mnt/boot # BOOT Mount

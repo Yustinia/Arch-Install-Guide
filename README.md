@@ -1,6 +1,6 @@
 # Arch Linux Installation Guide
 
-This is a minimal guide that helps you in the manual installation of Arch Linux so you can finally proclaim the title and enable yourself the privilege of *"I Use Arch BTW"*.
+This is a minimal guide that helps you in the manual installation of Arch Linux so you can finally proclaim the title and enable yourself the privilege of _"I Use Arch BTW"_.
 
 ## PREPARING NETWORK
 
@@ -21,11 +21,11 @@ This part focuses on EXT4 partitioning and mounting. If you prefer BTRFS, skip t
 
 Use `cfdisk {/dev/sdX}` to interactively create your partitions. Please do keep in mind that it may be different across devices.
 
-| Block | Type | Size |
-| --- | --- | --- |
-| /dev/sda1 | EFI | 1G |
-| /dev/sda2 | Linux filesystem | Any |
-| /dev/sda3 | Linux filesystem | Any |
+| Block     | Type             | Size |
+| --------- | ---------------- | ---- |
+| /dev/sda1 | EFI              | 1G   |
+| /dev/sda2 | Linux filesystem | Any  |
+| /dev/sda3 | Linux filesystem | Any  |
 
 Afterwards, we format the partitions:
 
@@ -47,10 +47,10 @@ This part focuses on BTRFS partitioning. If you prefer EXT4, do above.
 
 Use `cfdisk {/dev/sdX}` to interactively create your partitions.
 
-| Block | Type | Size |
-| --- | --- | --- |
-| /dev/sda1 | EFI | 1G |
-| /dev/sda2 | Linux filesystem | Any |
+| Block     | Type             | Size |
+| --------- | ---------------- | ---- |
+| /dev/sda1 | EFI              | 1G   |
+| /dev/sda2 | Linux filesystem | Any  |
 
 Afterwards, we format the partitions.
 
@@ -71,22 +71,40 @@ btrfs subvolume create /mnt/@var_log
 btrfs subvolume create /mnt/@var_cache
 btrfs subvolume create /mnt/@var_tmp
 btrfs subvolume create /mnt/@tmp
+
+# optional
+btrfs subvolume create /mnt/@flatpak
+btrfs subvolume create /mnt/@docker
+btrfs subvolume create /mnt/@libvirt
+btrfs subvolume create /mnt/@games
+btrfs subvolume create /mnt/@projects
+
 umount /mnt
 ```
 
-After creating, we mount the subvolumes. Additionally, you can define zstd compression with `compress=zstd:1` through `compress=zstd:15`. Keep in mind that every other subvolume **will** adopt that zstd compression.
+After creating, we mount the subvolumes. Additionally, you can define zstd compression with `compress=zstd:1` through `compress=zstd:15`. Keep in mind that every following subvolume mount **will** adopt the compression level regardless of explicit value.
 
 ```bash
 mount -o noatime,compress=zstd,ssd,discard=async,space_cache=v2,subvol=@ /dev/sda2 /mnt
 
-mount --mkdir -o noatime,compress=zstd,ssd,discard=async,space_cache=v2,subvol=@home /dev/sda2 /mnt/home
-mount --mkdir -o noatime,compress=zstd,ssd,discard=async,space_cache=v2,subvol=@var_log /dev/sda2 /mnt/var/log
-mount --mkdir -o noatime,compress=zstd,ssd,discard=async,space_cache=v2,subvol=@var_cache /dev/sda2 /mnt/var/cache
-mount --mkdir -o noatime,compress=zstd,ssd,discard=async,space_cache=v2,subvol=@var_tmp /dev/sda2 /mnt/var/tmp
-mount --mkdir -o noatime,compress=zstd,ssd,discard=async,space_cache=v2,subvol=@tmp /dev/sda2 /mnt/tmp
+mount --mkdir -o noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=@home /dev/sda2 /mnt/home
+mount --mkdir -o noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=@var_log /dev/sda2 /mnt/var/log
+mount --mkdir -o noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=@var_cache /dev/sda2 /mnt/var/cache
+mount --mkdir -o noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=@var_tmp /dev/sda2 /mnt/var/tmp
+mount --mkdir -o noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=@tmp /dev/sda2 /mnt/tmp
 
-mkdir -pv /mnt/boot
-mount /dev/sda1 /mnt/boot # BOOT Mount
+# if did optional
+mount --mkdir -o noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=@flatpak /dev/sda2 /mnt/var/lib/flatpak
+mount --mkdir -o noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=@docker /dev/sda2 /mnt/var/lib/docker
+mount --mkdir -o noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=@libvirt /dev/sda2 /mnt/var/lib/libvirt
+mount --mkdir -o noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=@games /dev/sda2 /mnt/home/games
+mount --mkdir -o noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=@projects /dev/sda2 /mnt/home/projects
+
+chattr +C /mnt/var/lib/docker
+chattr +C /mnt/var/lib/libvirt
+chattr +C /mnt/home/games
+
+mount --mkdir /dev/sda1 /mnt/boot
 ```
 
 > My personal suggestion is use BTRFS for ROOT and EXT4 for HOME. This was you can utilize snapshots and compression in the ROOT partition while benefitting speed using EXT4.
@@ -121,6 +139,8 @@ For BTRFS:
 ```bash
 btrfs subvolume create /swap
 btrfs filesystem mkswapfile --size 4G --uuid clear /swap/swapfile
+chattr +C /swap
+chattr +C /swap/swapfile
 lsattr /swap/swapfile # Check for "C"
 
 swapon /swap/swapfile # Activate swapfile if not yet activated
@@ -145,13 +165,7 @@ compression-algorithm = zstd
 swap-priority = 100
 ```
 
-Save the file and let's activate it.
-
-```bash
-sudo systemctl daemon-reexec && systemctl restart systemd-zram-setup@zram0.service
-```
-
-Verify if zram and swap exists with `lsblk` and `swapon --show`.
+Save the file.
 
 ## TIME ZONE
 
@@ -172,7 +186,7 @@ Run `locale-gen` to generate the chosen locale.
 
 Inside `/etc/locale.conf`, add `LANG=en_US.UTF-8` or the locale that you chose and save
 
-Inside `/etc/hostname`, give your device your desired hostname (it can be anything). I will use *HPArch* for this.
+Inside `/etc/hostname`, give your device your desired hostname (it can be anything). I will use _HPArch_ for this.
 
 Then in `/etc/hosts` add the following.
 
@@ -276,6 +290,7 @@ sudo pacman -S --needed fastfetch btop reflector vim nvim nano
 ```
 
 Faster Mirrors:
+
 ```bash
 sudo reflector -p https -f 8 --sort rate -c "countries" --save /etc/pacman.d/mirrorlist
 ```

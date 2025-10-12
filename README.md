@@ -100,14 +100,15 @@ mount --mkdir -o noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol
 mount --mkdir -o noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=@games /dev/sda2 /mnt/home/games
 mount --mkdir -o noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=@projects /dev/sda2 /mnt/home/projects
 
+chattr +C /mnt/var/tmp
+chattr +C /mnt/tmp
 chattr +C /mnt/var/lib/docker
 chattr +C /mnt/var/lib/libvirt
-chattr +C /mnt/home/games
 
 mount --mkdir /dev/sda1 /mnt/boot
 ```
 
-> My personal suggestion is use BTRFS for ROOT and EXT4 for HOME. This was you can utilize snapshots and compression in the ROOT partition while benefitting speed using EXT4.
+> My personal suggestion is go full-on BTRFS to benefit from subvolume snapshotting, isolating other subvolumes from the core snapshot.
 
 ## INSTALLING THE BASE System
 

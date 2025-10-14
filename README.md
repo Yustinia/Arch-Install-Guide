@@ -44,17 +44,17 @@ Use `cfdisk {/dev/sdX}` to interactively create your partitions.
 
 ## SECURE OUR DRIVE WITH CRYPTSETUP
 
-We encrypt the partition where the ROOT would be i.e. `/dev/vda2`.
+We encrypt the partition where the ROOT would be i.e. `/dev/sda2`.
 
-`cryptsetup luksFormat /dev/vda2`
+`cryptsetup luksFormat /dev/sda2`
 
 Give it a password and confirm it.
 
-`cryptsetup open /dev/vda2 {name}`
+`cryptsetup open /dev/sda2 {name}`
 
 A common name convention is "cryptroot".
 
-Using `lsblk` will list a new partition nested under `/dev/vda2`, we will use that.
+Using `lsblk` will list a new partition nested under `/dev/sda2`, we will use that.
 
 ## FORMAT MOUNT SUBVOLUMES
 

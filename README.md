@@ -1,6 +1,8 @@
 # Arch Linux Installation Guide
 
-This is a minimal guide that helps you in the manual installation of Arch Linux so you can finally proclaim the title and enable yourself the privilege of _"I Use Arch BTW"_.
+This is a minimal guide that helps you in the manual installation of Arch Linux so you can finally proclaim the title and enable yourself the privilege of *"I Use Arch BTW"*.
+
+This focuses more on the BTRFS filesystem setup than EXT4; however, EXT4 is still included as the optional segments.
 
 ## PREPARING NETWORK
 
@@ -65,19 +67,19 @@ mount /dev/sda2 /mnt # Temporary mount
 Then we will create our subvolumes.
 
 ```bash
-btrfs subvolume create /mnt/@ # ROOT
-btrfs subvolume create /mnt/@home # HOME
+btrfs subvolume create /mnt/@       # ROOT
+btrfs subvolume create /mnt/@home   # HOME
 btrfs subvolume create /mnt/@var_log
 btrfs subvolume create /mnt/@var_cache
 btrfs subvolume create /mnt/@var_tmp
 btrfs subvolume create /mnt/@tmp
 
 # optional
-btrfs subvolume create /mnt/@flatpak
-btrfs subvolume create /mnt/@docker
-btrfs subvolume create /mnt/@libvirt
-btrfs subvolume create /mnt/@games
-btrfs subvolume create /mnt/@projects
+btrfs subvolume create /mnt/@flatpak    # for pkgs separation from pacman
+btrfs subvolume create /mnt/@docker     # for containers
+btrfs subvolume create /mnt/@libvirt    # for virtual machines
+btrfs subvolume create /mnt/@games      # for personal game files
+btrfs subvolume create /mnt/@projects   # for coding projects
 
 umount /mnt
 ```
@@ -85,32 +87,32 @@ umount /mnt
 After creating, we mount the subvolumes. Additionally, you can define zstd compression with `compress=zstd:1` through `compress=zstd:15`. Keep in mind that every following subvolume mount **will** adopt the compression level regardless of explicit value.
 
 ```bash
-mount -o noatime,compress=zstd,ssd,discard=async,space_cache=v2,subvol=@ /dev/sda2 /mnt
+mount --mkdir /dev/sda1 /mnt/boot
+mount -o noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=@ /dev/sda2 /mnt
 
-mount --mkdir -o noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=@home /dev/sda2 /mnt/home
-mount --mkdir -o noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=@var_log /dev/sda2 /mnt/var/log
-mount --mkdir -o noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=@var_cache /dev/sda2 /mnt/var/cache
-mount --mkdir -o noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=@var_tmp /dev/sda2 /mnt/var/tmp
-mount --mkdir -o noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=@tmp /dev/sda2 /mnt/tmp
+# first mount option becomes the deafult for the entire BTRFS filesystem
+mount --mkdir -o subvol=@home /dev/sda2 /mnt/home
+mount --mkdir -o subvol=@var_log /dev/sda2 /mnt/var/log
+mount --mkdir -o subvol=@var_cache /dev/sda2 /mnt/var/cache
+mount --mkdir -o subvol=@var_tmp /dev/sda2 /mnt/var/tmp
+mount --mkdir -o subvol=@tmp /dev/sda2 /mnt/tmp
 
 # if did optional
-mount --mkdir -o noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=@flatpak /dev/sda2 /mnt/var/lib/flatpak
-mount --mkdir -o noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=@docker /dev/sda2 /mnt/var/lib/docker
-mount --mkdir -o noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=@libvirt /dev/sda2 /mnt/var/lib/libvirt
-mount --mkdir -o noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=@games /dev/sda2 /mnt/home/games
-mount --mkdir -o noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=@projects /dev/sda2 /mnt/home/projects
+mount --mkdir -o subvol=@flatpak /dev/sda2 /mnt/var/lib/flatpak
+mount --mkdir -o subvol=@docker /dev/sda2 /mnt/var/lib/docker
+mount --mkdir -o subvol=@libvirt /dev/sda2 /mnt/var/lib/libvirt
+mount --mkdir -o subvol=@games /dev/sda2 /mnt/home/games
+mount --mkdir -o subvol=@projects /dev/sda2 /mnt/home/projects
 
-chattr +C /mnt/var/tmp
-chattr +C /mnt/tmp
+chattr +C /mnt/home/games
+chattr +C /mnt/home/projects
 chattr +C /mnt/var/lib/docker
 chattr +C /mnt/var/lib/libvirt
-
-mount --mkdir /dev/sda1 /mnt/boot
 ```
 
 > My personal suggestion is go full-on BTRFS to benefit from subvolume snapshotting, isolating other subvolumes from the core snapshot.
 
-## INSTALLING THE BASE System
+## INSTALLING THE BASE SYSTEM
 
 We're going to use pacstrap to install the necessary packages for Arch.
 
@@ -243,6 +245,25 @@ GRUB_DISABLE_SUBMENU=y # Remove the comment
 
 Save and regenerate the GRUB config with `grub-mkconfig -o /boot/grub/grub.cfg`
 
+## ADDITIONAL SETUP
+
+Once you booted into your Arch system. Mount `/dev/sda2` to `/mnt` for the subvolumes.
+
+```bash
+btrfs subvolume create /mnt/@home/{username}/Downloads
+btrfs subvolume create /mnt/@home/{username}/Documents
+btrfs subvolume create /mnt/@home/{username}/Videos
+btrfs subvolume create /mnt/@home/{username}/Pictures
+```
+
+This ensures that when you snapshot your `@home` subvolume, these directories that are usually bloated by user files, will not be included; thus, saving more storage.
+
+Let's include the `multilib` repo by modifying the `/etc/pacman.conf`.
+
+Locate `multilib` and uncomment the header and Include line.
+
+Save it then do `pacman -Syy` to refresh repos.
+
 ### ERROR PGP FIXES
 
 When you try to boot into your new Arch install and attempt to update with `sudo pacman -Syu`. Do the following below to fix PGP Errors.
@@ -250,6 +271,7 @@ When you try to boot into your new Arch install and attempt to update with `sudo
 ```bash
 pacman-key --init
 pacman-key --populate
+pacman -Syy     # refresh repos
 ```
 
 Then try to update again with `sudo pacman -Syu`.
@@ -287,13 +309,34 @@ sudo pacman -S --needed pipewire pipewire-pulse pipewire-alsa wireplumber
 Optional:
 
 ```bash
-sudo pacman -S --needed fastfetch btop reflector vim nvim nano
+sudo pacman -S --needed fastfetch btop reflector vim eza ripgrep fd git bat
 ```
 
 Faster Mirrors:
 
 ```bash
 sudo reflector -p https -f 8 --sort rate -c "countries" --save /etc/pacman.d/mirrorlist
+```
+
+AUR Helper
+
+Choose either paru or yay.
+
+```bash
+git clone https://aur.archlinux.org/yay.git
+cd yay
+makepkg -si
+
+git clone https://aur.archlinux.org/paru.git
+cd paru
+makepkg -si
+```
+
+If you prefer no compilation.
+
+```bash
+git clone https://aur.archlinux.org/yay-bin.git
+git clone https://aur.archlinux.org/paru-bin.git
 ```
 
 ### FIX RTW89 WIFI

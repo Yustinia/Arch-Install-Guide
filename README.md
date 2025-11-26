@@ -122,7 +122,7 @@ chattr +C /mnt/var/lib/libvirt
 We're going to use pacstrap to install the necessary packages for Arch.
 
 ```bash
-pacstrap -K /mnt base linux linux-firmware linux base-devel efibootmgr grub networkmanager btrfs-progs vim lvm2 cryptsetup
+pacstrap -K /mnt base linux linux-firmware linux base-devel efibootmgr grub networkmanager btrfs-progs vim cryptsetup
 
 genfstab -U /mnt >> /mnt/etc/fstab
 
@@ -221,7 +221,7 @@ Before we install the GRUB bootloader, we need to setup the encrypted partition.
 Then inside `/etc/default/grub`:
 
 ```bash
-GRUB_CMDLINE_LINUX_DEFAULT="cryptdevice=UUID={encrypted}:cryptroot root=UUID={unencrypted}"     # do not remove that were present
+GRUB_CMDLINE_LINUX_DEFAULT="rd.luks.name={UUID of Encrypted}=cryptroot root=/dev/mapper/cryptroot"     # do not remove that were present
 ```
 
 Uncomment `GRUB_ENABLE_CRYPTODISK=y`.
@@ -238,8 +238,8 @@ In `/etc/mkinitcpio.conf`:
 ```bash
 MODULES=(btrfs)
 
-# add "encrypt" and "lvm2" betweem block and filesystems
-HOOKS=(base udev autodetect microcode modconf kms keyboard keymap consolefont block encrypt lvm2 filesystems fsck)
+# add "sd-encrypt" betweem block and filesystems
+HOOKS=(block sd-encrypt filesystems)
 ```
 
 Then do `mkinitcpio -P`

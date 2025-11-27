@@ -38,4 +38,4 @@ export ZRAM_ALGO="zstd"
 export ZRAM_PRIO="100"
 
 # Packages
-export PACSTRAP_PKGS="base linux-zen linux-firmware linux-zen-headers base-devel efibootmgr grub networkmanager btrfs-progs vim cryptsetup zram-generator"
+export PACSTRAP_PKGS=(base linux-zen linux-firmware linux-zen-headers base-devel efibootmgr grub networkmanager btrfs-progs vim cryptsetup zram-generator)

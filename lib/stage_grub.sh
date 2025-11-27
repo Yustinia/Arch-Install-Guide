@@ -1,6 +1,6 @@
 #!/bin/bash
 
-CRYPT_PARAMS="rd.luks.name=$(blkid -o value -s UUID ${BTRFS_UUID})=${LUKS_NAME} root=${LUKS_PART}"
+CRYPT_PARAMS="rd.luks.name=${BTRFS_UUID}=${LUKS_NAME} root=${LUKS_PART}"
 
 arch-chroot /mnt sed -i \
     "/^GRUB_CMDLINE_LINUX_DEFAULT=/ s/\"$/ ${CRYPT_PARAMS}\"/" \

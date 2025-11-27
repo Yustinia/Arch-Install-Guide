@@ -1,6 +1,6 @@
 #!/bin/bash
 
-pacstap -K /mnt "${PACSTRAP_PKGS[@]}"
+pacstrap -K /mnt "${PACSTRAP_PKGS[@]}"
 
 genfstab -U /mnt >> /mnt/etc/fstab
 

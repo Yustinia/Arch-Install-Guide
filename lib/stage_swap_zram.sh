@@ -13,5 +13,3 @@ btrfs filesystem mkswapfile --size "${BTRFS_SWAP_SIZE}" --uuid clear /mnt/swap/s
 chattr +C /mnt/swap/swapfile
 
 echo "/swap/swapfile none swap default 0 0" >> /mnt/etc/fstab
-
-echo "Successfully created ZRAM and SWAP"

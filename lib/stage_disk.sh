@@ -11,3 +11,4 @@ parted --script "${DISK}" mkpart primary 1GiB 100%
 
 export EFI_PART="${DISK}1"
 export ROOT_PART="${DISK}2"
+

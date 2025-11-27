@@ -3,10 +3,10 @@
 mkfs.fat -F32 "${EFI_PART}"
 fatlabel "${EFI_PART}" "ESP"
 
-mkfs.btrfs -L "MAIN" "${LUKS_PART}"
+mkfs.btrfs -f -L "MAIN" "${LUKS_PART}"
 
 # create subvolumes
-mount "${LUKS_PART}" /mount
+mount "${LUKS_PART}" /mnt
 
 btrfs subvolume create /mnt/@
 
@@ -37,5 +37,3 @@ mount --mkdir -o subvol=@swap "${LUKS_PART}" /mnt/swap
 mount --mkdir "${EFI_PART}" /mnt/boot
 
 chattr +C /mnt/swap
-
-echo "Successfully mounted subvolumes!"

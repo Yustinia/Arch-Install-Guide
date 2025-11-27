@@ -6,6 +6,8 @@ echo "${LOCALE_CONF}" >> /mnt/etc/locale.conf
 
 echo "${VCONSOLE}" >> /mnt/etc/vconsole.conf
 
-echo "${HOSTS}" >> /mnt/etc/HOSTS
+echo "${HOSTS}" >> /mnt/etc/hosts
 
 echo "${HOSTNAME}" >> /mnt/etc/hostname
+
+arch-chroot /mnt locale-gen

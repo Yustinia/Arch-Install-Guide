@@ -8,8 +8,8 @@ export ROOT_PART="${DISK}2"
 # Encryption
 export LUKS_NAME="cryptroot"
 export LUKS_PART="/dev/mapper/cryptroot"
-export ENCRYPTED_UUID=""
-export UNENCRYPTED_UUID=""
+export BTRFS_UUID="$(blkid -o value -s UUID $ROOT_PART)"
+export LUKS_UUID="$(blkid -o value -s UUID $LUKS_PART)"
 
 # BTRFS Configuration
 export SUBVOL_ROOT="@"

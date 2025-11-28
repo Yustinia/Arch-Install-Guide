@@ -2,7 +2,7 @@
 
 export CRYPT_PARAMS="rd.luks.name=${BTRFS_UUID}=${LUKS_NAME} root=${LUKS_PART}"
 
-sed -i "/^GRUB_CMDLINE_LINUX_DEFAULT=/s/\"$/ ${CRYPT_PARAMS}\"/" /mnt/etc/default/grub
+sed -i "/^GRUB_CMDLINE_LINUX_DEFAULT=/s|\"$| ${CRYPT_PARAMS}\"|" /mnt/etc/default/grub
 
 sed -i 's/#GRUB_ENABLE_CRYPTODISK=y/GRUB_ENABLE_CRYPTODISK=y/' /mnt/etc/default/grub
 

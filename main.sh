@@ -15,7 +15,6 @@ for line in "${message[@]}"; do
     sleep 0.5s
 done
 
-source "./user_conf.sh"
 
 main() {
     ./lib/stage_disk.sh || exit 1
@@ -72,4 +71,19 @@ main() {
     done
 }
 
-main
+read -rp "Enter choice (Y/N): " choice
+
+case "$choice" in
+    [Yy])
+        echo "Starting..."
+        sleep 3
+        main
+    ;;
+    [Nn])
+        echo "Exiting..."
+        exit 0
+    ;;
+    *)
+        echo "Invalid"
+        exit 1
+esac

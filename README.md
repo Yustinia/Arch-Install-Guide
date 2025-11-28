@@ -1,8 +1,26 @@
 # Arch Linux Installation Guide
 
-This is a minimal guide that helps you in the manual installation of Arch Linux so you can finally proclaim the title and enable yourself the privilege of *"I Use Arch BTW"*.
+This is a guide that shows my personal process in manually installing Arch Linux with BTRFS subvolumes, luks encryption, swap, and zram features.
 
-This primarly will focus only on BTRFS.
+A install script is also included does the following:
+
+1. Configure the `user_conf.sh` to set defaults. You **must first configure** the variables inside the file.
+
+2. Wipes the target disk and creates the necessary partitions.
+
+3. Encrypts the root partition.
+
+4. Formats and creates the necessary subvolumes.
+
+5. Installs the base system.
+
+6. Setup SWAP and ZRAM.
+
+7. Configures localization.
+
+8. Creates user and prompts for password.
+
+9. Configure and regenerate GRUB and Initramfs.
 
 ## CHAPTERS
 
@@ -77,13 +95,8 @@ btrfs subvolume create /mnt/@var_log
 btrfs subvolume create /mnt/@var_cache
 btrfs subvolume create /mnt/@var_tmp
 btrfs subvolume create /mnt/@tmp
-
-# optional
-btrfs subvolume create /mnt/@flatpak    # for pkgs separation from pacman
-btrfs subvolume create /mnt/@docker     # for containers
-btrfs subvolume create /mnt/@libvirt    # for virtual machines
-btrfs subvolume create /mnt/@games      # for personal game files
-btrfs subvolume create /mnt/@projects   # for coding projects
+btrfs subvolume create /mnt/@swap
+btrfs subvolume create /mnt/@snapshots
 
 umount /mnt
 ```
@@ -100,22 +113,9 @@ mount --mkdir -o subvol=@var_log /dev/mapper/cryptroot /mnt/var/log
 mount --mkdir -o subvol=@var_cache /dev/mapper/cryptroot /mnt/var/cache
 mount --mkdir -o subvol=@var_tmp /dev/mapper/cryptroot /mnt/var/tmp
 mount --mkdir -o subvol=@tmp /dev/mapper/cryptroot /mnt/tmp
-
-# if did optional
-mount --mkdir -o subvol=@flatpak /dev/mapper/cryptroot /mnt/var/lib/flatpak
-mount --mkdir -o subvol=@docker /dev/mapper/cryptroot /mnt/var/lib/docker
-mount --mkdir -o subvol=@libvirt /dev/mapper/cryptroot /mnt/var/lib/libvirt
-mount --mkdir -o subvol=@games /dev/mapper/cryptroot /mnt/home/games
-mount --mkdir -o subvol=@projects /dev/mapper/cryptroot /mnt/home/projects
-
-# nodatacow and nocompress for these paths
-chattr +C /mnt/home/games
-chattr +C /mnt/home/projects
-chattr +C /mnt/var/lib/docker
-chattr +C /mnt/var/lib/libvirt
+mount --mkdir -o subvol=@swap /dev/mapper/cryptroot /mnt/swap
+mount --mkdir -o subvol=@snapshots /dev/mapper/cryptroot /mnt/.snapshots
 ```
-
-> My personal suggestion is go full-on BTRFS to benefit from subvolume snapshotting, isolating other subvolumes from the core snapshot.
 
 ## INSTALLING THE BASE SYSTEM
 
@@ -134,14 +134,13 @@ arch-chroot /mnt
 This is important for hibernation/suspend/sleep to work properly.
 
 ```bash
-btrfs subvolume create /swap
-btrfs filesystem mkswapfile --size 4G --uuid clear /swap/swapfile
+btrfs filesystem mkswapfile --size {size}G --uuid clear /swap/swapfile
 chattr +C /swap
 chattr +C /swap/swapfile
 lsattr /swap/swapfile       # check for "C", if it's present means it's fine
 ```
 
-Inside `/etc/fstab` add:
+Inside `/etc/fstab` add.
 
 ```bash
 /swap/swapfile none swap default 0 0
@@ -183,7 +182,9 @@ Inside `/etc/locale.gen`, find your locale.
 
 Run `locale-gen` to generate the chosen locale.
 
-Inside `/etc/locale.conf`, add `LANG=en_US.UTF-8` or the locale that you chose and save
+Inside `/etc/locale.conf`, add `LANG=en_US.UTF-8` or the locale that you chose and save.
+
+Inside `/etc/vconsole.conf`, add `KEYMAP=us` then save.
 
 Inside `/etc/hostname`, give your device your desired hostname (it can be anything). I will use _HPArch_ for this.
 
@@ -215,13 +216,13 @@ Let's enable the network manager for wireless connectivity with `systemctl enabl
 
 Before we install the GRUB bootloader, we need to setup the encrypted partition.
 
-`blkid -o value -s UUID /dev/mapper/cryptroot >> /etc/default/grub`     # unencrypted UUID
-`blkid -o value -s UUID /dev/sda2 >> /etc/default/grub`     # encrypted UUID
+`blkid -o value -s UUID /dev/mapper/cryptroot >> /etc/default/grub` # unencrypted UUID
+`blkid -o value -s UUID /dev/sda2 >> /etc/default/grub` # encrypted UUID
 
-Then inside `/etc/default/grub`:
+Then inside `/etc/default/grub`.
 
 ```bash
-GRUB_CMDLINE_LINUX_DEFAULT="rd.luks.name={UUID of Encrypted}=cryptroot root=/dev/mapper/cryptroot"     # do not remove that were present
+GRUB_CMDLINE_LINUX_DEFAULT="rd.luks.name={UUID of Encrypted}=cryptroot root=/dev/mapper/cryptroot"     # only append the new entry from the existing line
 ```
 
 Uncomment `GRUB_ENABLE_CRYPTODISK=y`.
@@ -233,7 +234,7 @@ grub-mkconfig -o /boot/grub/grub.cfg
 
 ## MKINITCPIO
 
-In `/etc/mkinitcpio.conf`:
+In `/etc/mkinitcpio.conf`.
 
 ```bash
 MODULES=(btrfs)
@@ -246,7 +247,7 @@ Then do `mkinitcpio -P`
 
 > You don't need to do this below, it's a preference.
 
-Inside `/etc/default/grub`:
+Inside `/etc/default/grub`.
 
 ```bash
 GRUB_TIMEOUT={seconds}  # How long you want 'til GRUB automatically the highlighted option
@@ -264,25 +265,6 @@ systemctl reboot now
 ```
 
 ## ADDITIONAL SETUP
-
-Once you booted into your Arch system. Mount `/dev/mapper/cryptroot` to `/mnt`.
-
-```bash
-sudo btrfs subvolume create /mnt/@home/{username}/Downloads
-sudo btrfs subvolume create /mnt/@home/{username}/Documents
-sudo btrfs subvolume create /mnt/@home/{username}/Videos
-sudo btrfs subvolume create /mnt/@home/{username}/Pictures
-
-sudo chown $USER:$USER /home/{username}/Downloads
-sudo chown $USER:$USER /home/{username}/Documents
-sudo chown $USER:$USER /home/{username}/Videos
-sudo chown $USER:$USER /home/{username}/Pictures
-
-sudo chown $USER:$USER /home/games
-sudo chown $USER:$USER /home/projects
-
-umount /mnt
-```
 
 Let's include the `multilib` repo by modifying the `/etc/pacman.conf`.
 
@@ -370,9 +352,8 @@ git clone https://aur.archlinux.org/paru-bin.git
 This is my personal fix for Realtek Wifi Cards with the RTW89.
 
 ```bash
-yay -S --needed rtw89-dkms-git power-profiles-daemon
+paru -S --needed rtw89-dkms-git power-profiles-daemon python-gobject
 systemctl enable --now power-profiles-daemon.service
-powerprofilesctl list # List available profiles
 powerprofilesctl set performance # Set maximum profile
 ```
 
@@ -386,13 +367,12 @@ wifi.powersave = 2
 Inside `/etc/default/grub`.
 
 ```bash
-GRUB_CMDLINE_LINUX_DEFAULT="pcie_aspm=off"      # Add this parameter
+GRUB_CMDLINE_LINUX_DEFAULT="pcie_aspm=off"      # Append this parameter at the end
 ```
 
 Inside `/etc/modprobe.d/rtw89.conf`, set following options to "y".
 
 ```bash
-options rtw89_core_git debug_mask=0x0
 options rtw89_core_git disable_ps_mode=y
 
 options rtw89_pci_git disable_clkreq=y

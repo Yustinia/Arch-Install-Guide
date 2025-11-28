@@ -8,8 +8,11 @@ export ROOT_PART="${DISK}2"
 # Encryption
 export LUKS_NAME="cryptroot"
 export LUKS_PART="/dev/mapper/cryptroot"
-export BTRFS_UUID="$(blkid -o value -s UUID $ROOT_PART)"
-export LUKS_UUID="$(blkid -o value -s UUID $LUKS_PART)"
+BTRFS_UUID="$(blkid -o value -s UUID "$ROOT_PART")"
+LUKS_UUID="$(blkid -o value -s UUID "$LUKS_PART")"
+export BTRFS_UUID
+export LUKS_UUID
+
 
 # BTRFS Configuration
 export SUBVOL_ROOT="@"
@@ -28,7 +31,7 @@ export HOSTNAME="Arch"
 export HOSTS="127.0.1.1 Arch.localdomain Arch"
 export USERNAME="myUser"
 export TIMEZONE="Asia/Manila"
-export LOCALE="en_US.UTF-8 UTF-8"
+# export LOCALE="en_US.UTF-8 UTF-8"
 export LOCALE_CONF="LANG=en_US.UTF-8"
 export VCONSOLE="KEYMAP=us"
 
@@ -36,6 +39,3 @@ export VCONSOLE="KEYMAP=us"
 export ZRAM_FRACTION="0.6"
 export ZRAM_ALGO="zstd"
 export ZRAM_PRIO="100"
-
-# Packages
-export PACSTRAP_PKGS=(base linux-zen linux-firmware linux-zen-headers base-devel efibootmgr grub networkmanager btrfs-progs vim cryptsetup zram-generator)

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-wipefs -af ${DISK}
+wipefs -af "${DISK}"
 
 parted --script "${DISK}" mklabel gpt
 

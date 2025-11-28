@@ -1,6 +1,6 @@
 #!/bin/bash
 
-sed -i "/^# *${LOCALE}$/s/^# *//" /mnt/etc/locale.gen
+sed -i 's/^#en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /mnt/etc/locale.gen
 
 echo "${LOCALE_CONF}" >> /mnt/etc/locale.conf
 

@@ -23,7 +23,6 @@ main() {
 
     ./lib/stage_encryption.sh || exit 1
     echo "Encryption Done!"
-    source lib/stage_encryption.sh
     sleep 3
 
     ./lib/stage_format_and_subvol.sh || exit 1
@@ -79,7 +78,6 @@ case "$choice" in
     [Yy])
         echo "Starting..."
         sleep 3
-        source user_conf.sh
         main
     ;;
     [Nn])

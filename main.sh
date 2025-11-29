@@ -28,9 +28,9 @@ get_disk_uuid() {
 }
 
 get_encryption_uuid() {
-    BTRFS_UUID="$(blkid -o value -s UUID "$ROOT_PART")"
+    BTRFS_UUID="$(blkid -o value -s UUID "${ROOT_PART}")"
     export BTRFS_UUID
-    LUKS_UUID="$(blkid -o value -s UUID "$LUKS_PART")"
+    LUKS_UUID="$(blkid -o value -s UUID "${LUKS_PART}")"
     export LUKS_UUID
 
     echo "$BTRFS_UUID"

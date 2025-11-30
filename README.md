@@ -1,6 +1,6 @@
 # Arch Linux Installation Guide
 
-This is a guide that shows my personal process in manually installing Arch Linux with BTRFS subvolumes, luks encryption, swap, and zram features.
+This is a guide that shows my *personal process* in manually installing Arch Linux with BTRFS subvolumes, luks encryption, swap, and zram features.
 
 A install script is also included does the following:
 

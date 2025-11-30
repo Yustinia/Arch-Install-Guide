@@ -8,22 +8,20 @@ check_root_user() {
 }
 
 # set variables below
-# DISKS and PARTS
+# DISKS
 DISK="/dev/sda"
 
 # Encryption
 LUKS_NAME="cryptroot"
 LUKS_PART="/dev/mapper/cryptroot"
-
 BTRFS_SWAP_SIZE="8G"
 
-# System
+# Localization and User
 HOSTNAME="Arch"
 HOSTS="127.0.1.1 Arch.localdomain Arch"
 USERNAME="myUser"
 TIMEZONE_CONT="Asia"
 TIMEZONE_CITY="Manila"
-# LOCALE="en_US.UTF-8 UTF-8"
 LOCALE_CONF="LANG=en_US.UTF-8"
 VCONSOLE="KEYMAP=us"
 
@@ -173,7 +171,7 @@ main() {
     check_root_user
 
     welcome_msg=("This is an Arch Install script"
-                 "Configure the defaults via the user_conf.sh file"
+                 "Configure the defaults at the top of this script"
                  "If you like this script, please leave a star on the repo!"
                  "Thank you!")
 
@@ -231,3 +229,5 @@ main() {
 
     exit 0
 }
+
+main

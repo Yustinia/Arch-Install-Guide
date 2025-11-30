@@ -105,7 +105,6 @@ read -rp "Enter choice (Y/N): " choice
 case "$choice" in
     [Yy])
         echo "Starting..."
-        source user_conf.sh
         sleep 2
         main
     ;;

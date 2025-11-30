@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source ../user_conf.sh
+source user_conf.sh
 
 export CRYPT_PARAMS="rd.luks.name=${BTRFS_UUID}=${LUKS_NAME} root=${LUKS_PART}"
 

@@ -1,8 +1,5 @@
 #!/bin/bash
 
-set -e
-set -u
-
 if [[ $EUID -ne 0 ]]; then
     echo "Not the ROOT user"
     exit 1
@@ -40,56 +37,56 @@ get_encryption_uuid() {
 main() {
     ./lib/stage_disk.sh
     echo "Disk Configuration Done!"
-    sleep 3
+    sleep 2
 
     echo "Obtaining Disk UUIDs..."
     get_disk_uuid
     echo "Disk UUIDs Got!"
-    sleep 3
+    sleep 2
 
     ./lib/stage_encryption.sh
     echo "Encryption Done!"
-    sleep 3
+    sleep 2
 
     echo "Obtaining Encryption UUIDs..."
     get_encryption_uuid
     echo "UUIDs Got!"
-    sleep 3
+    sleep 2
 
     ./lib/stage_format_and_subvol.sh
     echo "Format and Subvol Creation Done!"
-    sleep 3
+    sleep 2
 
     ./lib/stage_base_install.sh
     echo "Base Install Done!"
-    sleep 3
+    sleep 2
     
     ./lib/stage_swap_zram.sh
     echo "SWAP and ZRAM Creation Done!"
-    sleep 3
+    sleep 2
 
     ./lib/stage_localization.sh
     echo "Localization Done"
-    sleep 3
+    sleep 2
 
     ./lib/stage_user_root.sh
     echo "User Creation Done!"
-    sleep 3
+    sleep 2
 
     ./lib/stage_services.sh
     echo "Service Activation Done!"
-    sleep 3
+    sleep 2
 
     ./lib/stage_grub.sh
     echo "GRUB Configuration Done!"
-    sleep 3
+    sleep 2
 
     ./lib/stage_initramfs.sh
     echo "Initramfs Configuration Done!"
-    sleep 3
+    sleep 2
 
     echo "Finished: $(date +%Y-%m-%d-%I:%M%p)"
-    sleep 3
+    sleep 2
 
     local message
 
@@ -109,7 +106,7 @@ case "$choice" in
     [Yy])
         echo "Starting..."
         source user_conf.sh
-        sleep 3
+        sleep 2
         main
     ;;
     [Nn])

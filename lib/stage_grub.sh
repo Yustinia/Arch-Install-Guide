@@ -1,5 +1,7 @@
 #!/bin/bash
 
+source ../user_conf.sh
+
 export CRYPT_PARAMS="rd.luks.name=${BTRFS_UUID}=${LUKS_NAME} root=${LUKS_PART}"
 
 sed -i "/^GRUB_CMDLINE_LINUX_DEFAULT=/s|\"$| ${CRYPT_PARAMS}\"|" /mnt/etc/default/grub

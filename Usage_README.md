@@ -1,6 +1,6 @@
 # Usage README
 
-This the steps on how to use the installation script.
+This the steps on how to use the installation script. Take note that these are my personal defaults.
 
 ## The Defaults
 

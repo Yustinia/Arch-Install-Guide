@@ -37,6 +37,8 @@ Format the partitions:
 5. `vgcreate vg0 /dev/mapper/encrypt`
 6. `lvcreate -L 50G -n arch-root vg0`
 7. `lvcreate -l 100%FREE -n arch-home vg0`
+8. `mkfs.btrfs -L root /dev/vg0/arch-root`
+9. `mkfs.ext4 -L home /dev/vg0/arch-home`
 
 Mount arch-root to create the subvolumes using `mount /dev/vg0/arch-root /mnt`
 
@@ -70,10 +72,11 @@ Mount the following subvolumes to their respective mountpoints:
 
 > It's better to use the same options on each, this ensures uniform fstab entries on generation.
 
-Mount the EFI and boot partitions:
+Mount the rest of the partitions:
 
 1. `mount --mkdir /dev/nvme0n1p2 /mnt/boot`
 2. `mount --mkdir /dev/nvme0n1p1 /mnt/boot/efi`
+3. `mount --mkdir /dev/vg0/arch-home /mnt/home`
 
 ## BASE INSTALL
 

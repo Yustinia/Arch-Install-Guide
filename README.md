@@ -184,7 +184,7 @@ Install the base system and essential packages using `pacstrap`:
 
 ```bash
 pacstrap -K /mnt \
-  base linux-zen linux-zen-headers base-devel \
+  base linux-zen linux-zen-headers base-devel linux-firmware \
   git efibootmgr grub iwd \
   btrfs-progs vim cryptsetup lvm2 zram-generator
 ```
@@ -216,7 +216,7 @@ Add the swapfile entry to `/etc/fstab`:
 
 ```bash
 # /etc/fstab — append this line:
-/swap/swapfile  none  swap  defaults  0  0
+/swap/swapfile  none  swap  default  0  0
 ```
 
 ## Zram
@@ -336,6 +336,16 @@ systemctl enable iwd.service
 ```
 
 > 📝 `iwd` (iNet wireless daemon) handles Wi-Fi. If you plan to use it alongside `systemd-resolved` for DNS, ensure both are enabled (see Chapter 9).
+
+Create a file at `/etc/iwd/main.conf` and add these:
+
+```bash
+[General]
+EnableNetworkConfiguration=true
+
+[Network]
+NameResolvingService=systemd
+```
 
 ---
 

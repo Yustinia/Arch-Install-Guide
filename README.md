@@ -426,7 +426,7 @@ MODULES=(btrfs)
 **2. Add `sd-encrypt` and `lvm2` to the hooks** — they must appear **between** `block` and `filesystems`:
 
 ```bash
-HOOKS=(base udev autodetect modconf kms keyboard keymap consolefont block sd-encrypt lvm2 filesystems fsck)
+HOOKS=(base systemd autodetect microcode modconf kms keyboard keymap sd-vconsole block sd-encrypt lvm2 filesystems fsck)
 ```
 
 > ℹ️ The full HOOKS line is shown above for clarity. `sd-encrypt` handles LUKS unlocking at boot; `lvm2` activates the volume groups. Their position relative to `block` and `filesystems` is **required**.

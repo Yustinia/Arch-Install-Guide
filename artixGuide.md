@@ -339,8 +339,8 @@ dinitctl enable <service>
 Enable the required services:
 
 ```bash
-ln -s /etc/runit/sv/iwd        /etc/runit/runsvdir/default/   # Wireless networking
-ln -s /etc/runit/sv/zramen     /etc/runit/runsvdir/default/   # Zram swap
+dinitctl enable iwd         # Wireless networking
+dinitctl enable zramen      # zram
 ```
 
 > 📝 `iwd` (iNet wireless daemon) handles Wi-Fi. Its configuration below enables built-in DHCP and points name resolution to `openresolv` (configured in Chapter 9).
@@ -429,13 +429,13 @@ Open `/etc/mkinitcpio.conf` and make the following changes:
 MODULES=(btrfs)
 ```
 
-**2. Add `sd-encrypt` and `lvm2` to the hooks** — they must appear **between** `block` and `filesystems`:
+**2. Add `encrypt` and `lvm2` to the hooks** — they must appear **between** `block` and `filesystems`:
 
 ```bash
-HOOKS=(base systemd autodetect microcode modconf kms keyboard keymap sd-vconsole block sd-encrypt lvm2 filesystems fsck)
+HOOKS=(base systemd autodetect microcode modconf kms keyboard keymap vconsole block encrypt lvm2 filesystems fsck)
 ```
 
-> ℹ️ The full HOOKS line is shown above for clarity. `sd-encrypt` handles LUKS unlocking at the initramfs stage — **before** runit takes over — so it remains valid here despite Artix not using systemd as its init. `lvm2` activates the volume groups. Their position relative to `block` and `filesystems` is **required**.
+> ℹ️ The full HOOKS line is shown above for clarity. `encrypt` handles LUKS unlocking at the initramfs stage — **before** runit takes over — so it remains valid here despite Artix not using systemd as its init. `lvm2` activates the volume groups. Their position relative to `block` and `filesystems` is **required**.
 
 Regenerate the initramfs:
 

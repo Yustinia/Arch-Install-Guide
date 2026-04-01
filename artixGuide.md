@@ -1,6 +1,6 @@
 # 🐧 Artix Linux Installation Guide
 
-> **Personal guide** for manually installing Artix Linux (runit) with:
+> **Personal guide** for manually installing Artix Linux (dinit) with:
 > `btrfs subvolumes` · `LUKS encryption` · `LVM` · `swapfile` · `zram`
 
 ---
@@ -185,14 +185,14 @@ Install the base system and essential packages using `basestrap`:
 ```bash
 basestrap /mnt \
   base linux-zen linux-zen-headers base-devel linux-firmware \
-  git efibootmgr grub iwd-runit \
-  btrfs-progs vim cryptsetup-runit lvm2-runit zramen
+  git efibootmgr grub iwd iwd-dinit \
+  btrfs-progs vim cryptsetup cryptsetup-dinit lvm2 lvm2-dinit zramen
 ```
 
 > 📝 **Artix-specific packages:**
 >
-> - `iwd-runit`, `lvm2-runit`, `cryptsetup-runit` — runit service definitions for each daemon
-> - `zramen-runit` — runit-compatible zram management
+> - `iwd-dinit`, `lvm2-dinit`, `cryptsetup-dinit` — dinit service definitions for each daemon
+> - `zramen` — dinit-compatible zram management
 
 Generate the filesystem table and enter the new system:
 
@@ -226,7 +226,7 @@ Add the swapfile entry to `/etc/fstab`:
 
 ## Zram
 
-`zram-generator` is a systemd-only tool and is **not used on Artix**. Instead, `zramen` (already installed in Chapter 3) provides runit-native zram management.
+`zram-generator` is a systemd-only tool and is **not used on Artix**. Instead, `zramen` (already installed in Chapter 3) provides dinit-native zram management.
 
 Edit `/etc/zramen.conf` and set the following values:
 
@@ -432,10 +432,10 @@ MODULES=(btrfs)
 **2. Add `encrypt` and `lvm2` to the hooks** — they must appear **between** `block` and `filesystems`:
 
 ```bash
-HOOKS=(base systemd autodetect microcode modconf kms keyboard keymap vconsole block encrypt lvm2 filesystems fsck)
+HOOKS=(... block encrypt lvm2 filesystems ...)
 ```
 
-> ℹ️ The full HOOKS line is shown above for clarity. `encrypt` handles LUKS unlocking at the initramfs stage — **before** runit takes over — so it remains valid here despite Artix not using systemd as its init. `lvm2` activates the volume groups. Their position relative to `block` and `filesystems` is **required**.
+> ℹ️ `encrypt` handles LUKS unlocking at the initramfs stage — **before** dinit takes over — so it remains valid here despite Artix not using systemd as its init. `lvm2` activates the volume groups. Their position relative to `block` and `filesystems` is **required**.
 
 Regenerate the initramfs:
 
@@ -452,4 +452,4 @@ exit
 reboot
 ```
 
-> 🎉 If everything is configured correctly, GRUB will prompt for your LUKS passphrase on boot, then hand off to the Artix runit system. Welcome to your new install!
+> 🎉 If everything is configured correctly, GRUB will prompt for your LUKS passphrase on boot, then hand off to the Artix dinit system. Welcome to your new install!

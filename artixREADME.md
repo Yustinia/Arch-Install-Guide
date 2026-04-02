@@ -1,4 +1,4 @@
-# Artix Install Guide
+# Artix Install Guide **NOT DONE YET, DO NOT FOLLOW**
 
 > A personal guide for manually installing Artix Linux — focused on dinit — with:
 > `btrfs subvolumes`, `swap`, and `zram`
@@ -211,3 +211,47 @@ EDITOR=vim visudo
 ```
 
 > Uncomment the wheel group
+
+## Network Stuff
+
+This guide will use `iwd` as the backend for `NetworkManager`:
+
+```bash
+# /etc/NetworkManager/conf.d/iwd.conf
+[device]
+wifi.backend=iwd
+```
+
+Configure DNS:
+
+```bash
+# /etc/resolvconf.conf
+name_servers="94.140.14.14 94.140.15.15"
+name_servers_append="1.1.1.1 1.0.0.1"
+```
+
+## GRUB & initramfs
+
+```bash
+grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=GRUB
+grub-mkconfig -o /boot/grub/grub.cfg
+```
+
+```bash
+# /etc/mkinitcpio.conf
+MODULES=(btrfs)
+
+mkinitcpio -P
+```
+
+## Finalization
+
+Exit chroot then reboot.
+
+Once logged in to your user:
+
+```bash
+dinitctl enable NetworkManager
+dinitctl enable iwd
+dinitctl enable zramen
+```

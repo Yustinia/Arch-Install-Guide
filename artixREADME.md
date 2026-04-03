@@ -1,47 +1,67 @@
-# Artix Install Guide **NOT DONE YET, DO NOT FOLLOW**
+# Artix Linux Install Guide
 
-> A personal guide for manually installing Artix Linux — focused on dinit — with:
-> `btrfs subvolumes`, `swap`, and `zram`
-> soon with `LUKS` and `LVMs`
+> A personal guide for manually installing **Artix Linux** with **dinit**, featuring:
+> `btrfs subvolumes` · `swap` · `zram`
+
+---
+
+## Table of Contents
+
+1. [Network](#network)
+2. [Drive Setup](#drive-setup)
+3. [Base Install](#base-install)
+4. [Swap & Zram](#swap--zram)
+5. [Users & Locale](#users--locale)
+6. [Network Configuration](#network-configuration)
+7. [GRUB & initramfs](#grub--initramfs)
+8. [Finalization](#finalization)
+
+---
 
 ## Network
 
-Use `iwctl` for **wireless** connection; otherwise, skip if using **ethernet** connection.
+Use `iwctl` for a **wireless** connection. Skip this section if using **ethernet**.
 
 ```bash
-iwctl station list                        # 1. Find your wireless station name
-iwctl station wlan0 scan                  # 2. Scan for nearby networks
-iwctl station wlan0 get-networks          # 3. List discovered networks
-iwctl station wlan0 connect <ssid>        # 4. Connect (replace <ssid> with your network name)
-ping -c 3 artixlinux.org                  # 5. Verify connectivity
+iwctl station list                       # 1. Find your wireless station name
+iwctl station wlan0 scan                 # 2. Scan for nearby networks
+iwctl station wlan0 get-networks         # 3. List discovered networks
+iwctl station wlan0 connect <ssid>       # 4. Connect (replace <ssid> with your network name)
+ping -c 3 artixlinux.org                 # 5. Verify connectivity
 ```
+
+---
 
 ## Drive Setup
 
-> The device is `/dev/nvme0n1`, replace `nvme0n1` with your device
+> The examples below use `/dev/nvme0n1`. Replace it with your actual device name.
 
-Using `cfdisk` to interactively partition the drive with the following layout:
+### Partitioning
 
-| Block            | Type             | Size      | Purpose             |
+Use `cfdisk` to interactively partition the drive with the following layout:
+
+| Partition        | Type             | Size      | Purpose             |
 | ---------------- | ---------------- | --------- | ------------------- |
-| `/dev/nvme0n1p1` | EFI System       | 512MiB    | EFI                 |
-| `/dev/nvme0n1p2` | Linux filesystem | 256MiB    | BOOT                |
-| `/dev/nvme0n1p3` | Linux filesystem | Remaining | Unified ROOT & HOME |
+| `/dev/nvme0n1p1` | EFI System       | 512 MiB   | EFI                 |
+| `/dev/nvme0n1p2` | Linux filesystem | 256 MiB   | Boot                |
+| `/dev/nvme0n1p3` | Linux filesystem | Remaining | Unified root & home |
 
-Format & label (for clarity) the partitions:
+### Formatting
 
 ```bash
 mkfs.fat -F32 /dev/nvme0n1p1
-fatlabel /dev/nvme0nap1 ESP
+fatlabel /dev/nvme0n1p1 ESP
 
 mkfs.ext4 -L BOOT /dev/nvme0n1p2
 
 mkfs.btrfs -L MAIN /dev/nvme0n1p3
 ```
 
-> You may label the partition however you like
+> You may label partitions however you like.
 
-Mount `/dev/nvme0n1p3` to `/mnt` for subvolume creation:
+### Creating Btrfs Subvolumes
+
+Mount the Btrfs partition temporarily to create subvolumes:
 
 ```bash
 mount /dev/nvme0n1p3 /mnt
@@ -56,19 +76,16 @@ btrfs subvolume create /mnt/@snapshots
 btrfs subvolume create /mnt/@swap
 btrfs subvolume create /mnt/@opt
 
+# Optional — only needed if you use Docker or libvirt
 btrfs subvolume create /mnt/@docker
 btrfs subvolume create /mnt/@libvirt
+
+umount /mnt
 ```
 
-> Docker and libvirt are optional unless you use those tools
+### Mounting Subvolumes
 
-Then unmount `/mnt`:
-
-```bash
- umount /mnt
-```
-
-Now mount the partitions & subvolumes — with the options — to ther respective mountpoints:
+The following mount options are used for all subvolumes **except** `@swap`:
 
 | Option            | Effect                                       |
 | ----------------- | -------------------------------------------- |
@@ -79,23 +96,32 @@ Now mount the partitions & subvolumes — with the options — to ther respectiv
 | `space_cache=v2`  | Uses the v2 free space cache (more reliable) |
 | `subvol=<name>`   | Selects which subvolume to mount             |
 
+> ⚠️ The `@swap` subvolume is mounted **without** `compress=zstd:3`. Btrfs swapfiles require the no-copy-on-write (`+C`) attribute, which is incompatible with compression. Using compression on the swap subvolume will prevent the swapfile from being activated.
+
 ```bash
-mount --mkdir -o noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=@          /dev/nvme0n1p3  /mnt
-mount --mkdir -o noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=@home      /dev/nvme0n1p3  /mnt/home
-mount --mkdir -o noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=@var_log   /dev/nvme0n1p3  /mnt/var/log
-mount --mkdir -o noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=@var_cache /dev/nvme0n1p3  /mnt/var/cache
-mount --mkdir -o noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=@var_tmp   /dev/nvme0n1p3  /mnt/var/tmp
-mount --mkdir -o noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=@tmp       /dev/nvme0n1p3  /mnt/tmp
-mount --mkdir -o noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=@snapshots /dev/nvme0n1p3  /mnt/.snapshots
-mount --mkdir -o noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=@swap      /dev/nvme0n1p3  /mnt/swap
-mount --mkdir -o noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=@opt       /dev/nvme0n1p3  /mnt/opt
+# Root and general subvolumes
+mount --mkdir -o noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=@          /dev/nvme0n1p3 /mnt
+mount --mkdir -o noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=@home      /dev/nvme0n1p3 /mnt/home
+mount --mkdir -o noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=@var_log   /dev/nvme0n1p3 /mnt/var/log
+mount --mkdir -o noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=@var_cache /dev/nvme0n1p3 /mnt/var/cache
+mount --mkdir -o noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=@var_tmp   /dev/nvme0n1p3 /mnt/var/tmp
+mount --mkdir -o noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=@tmp       /dev/nvme0n1p3 /mnt/tmp
+mount --mkdir -o noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=@snapshots /dev/nvme0n1p3 /mnt/.snapshots
+mount --mkdir -o noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=@opt       /dev/nvme0n1p3 /mnt/opt
 
-mount --mkdir -o noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=@docker    /dev/nvme0n1p3  /mnt/var/lib/docker
-mount --mkdir -o noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=@libvirt   /dev/nvme0n1p3  /mnt/var/lib/libvirt
+# Swap — NO compression flag
+mount --mkdir -o noatime,ssd,discard=async,space_cache=v2,subvol=@swap                      /dev/nvme0n1p3 /mnt/swap
 
-mount --mkdir /dev/nvme0n1p2    /mnt/boot
-mount --mkdir /dev/nvme0n1p1    /mnt/boot/efi
+# Optional
+mount --mkdir -o noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=@docker    /dev/nvme0n1p3 /mnt/var/lib/docker
+mount --mkdir -o noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,subvol=@libvirt   /dev/nvme0n1p3 /mnt/var/lib/libvirt
+
+# Boot partitions
+mount --mkdir /dev/nvme0n1p2 /mnt/boot
+mount --mkdir /dev/nvme0n1p1 /mnt/boot/efi
 ```
+
+---
 
 ## Base Install
 
@@ -103,97 +129,107 @@ Install the base system and essential packages using `basestrap`:
 
 ```bash
 basestrap /mnt base base-devel linux-zen linux-zen-headers linux-firmware \
-    efibootmgr grub dinit elogind-dinit iwd iwd-dinit networkmanager networkmanager-dinit \
-    zramen zramen-dinit btrfs-progs vim
+    efibootmgr grub dinit elogind-dinit \
+    iwd iwd-dinit networkmanager networkmanager-dinit \
+    zramen zramen-dinit btrfs-progs openresolv vim
 ```
 
-Generate the filesystem table before chrooting:
+> `openresolv` is required for `/etc/resolvconf.conf` to work correctly.
+
+Generate the filesystem table, then chroot into the new system:
 
 ```bash
 fstabgen -U /mnt >> /mnt/etc/fstab
 artix-chroot /mnt
 ```
 
+---
+
 ## Swap & Zram
 
-To create a BTRFS swapfile, follow below:
+### Btrfs Swapfile
+
+Setting `+C` (no-copy-on-write) on the directory **before** creating the swapfile ensures the file inherits the attribute correctly. Setting it after the fact on an already-written file has no retroactive effect on existing data.
 
 ```bash
 chattr +C /swap
 btrfs filesystem mkswapfile --size 8G --uuid clear /swap/swapfile
-chattr +C /swap/swapfile
 ```
 
-> You may set the size however you like
+> You may set the size however you like.
 
-Then edit the fstab to add the entry below:
+Then add the swapfile entry to `/etc/fstab`:
 
-```bash
+```
 # /etc/fstab
-/swap/swapfile      none        swap        default     0 0
+/swap/swapfile    none    swap    defaults    0 0
 ```
 
-For zram using zramen, create and edit the file on `/etc/zramen.conf`:
+### Zram with zramen
 
-```bash
-# /etc/zramen.conf
-ZRAM_SIZE=50
+Create `/etc/dinit.d/config/zramen.conf` with the following content:
+
+```json
+# /etc/dinit.d/config/zramen.conf
+ZRAM_SIZE=50              # Percentage of total RAM to allocate (e.g. 50 = 50%)
 ZRAM_COMP_ALGORITHM=zstd
 ZRAM_PRIORITY=100
 ```
 
-> ZRAM_SIZE is percent based, you can allocate 65% of ram by replacing 50 with 65
+> Zram will be compressed using `zstd` and given priority over the swapfile. Increase `ZRAM_SIZE` to `65` if you want to allocate more RAM.
 
-## User & Time
+---
+
+## Users & Locale
+
+### Timezone & Hardware Clock
 
 ```bash
 ln -sf /usr/share/zoneinfo/Asia/Manila /etc/localtime
 hwclock --systohc
 ```
 
-Edit `/etc/locale.gen` using your editor to find and uncomment your locale.
-For US English:
+### Locale
 
-```bash
+Uncomment your locale in `/etc/locale.gen`. For US English:
+
+```
 # /etc/locale.gen
 en_US.UTF-8 UTF-8
 ```
 
-Then generate the locale:
+Generate the locale:
 
 ```bash
 locale-gen
 ```
 
-Set the locale and console keymap:
+Set the active locale:
 
-```bash
+```
 # /etc/locale.conf
 LANG=en_US.UTF-8
-
-# /etc/vconsole.conf
-KEYMAP=us
 ```
 
-Set the machine hostname:
+### Hostname
 
-```bash
+```
 # /etc/hostname
 artix
 ```
 
-Configure the local hosts file:
+Configure the local hosts file, making sure the entry in `127.0.1.1` matches what you set in `/etc/hostname`:
 
-```bash
+```
 # /etc/hosts
-127.0.0.1   localhost
-::1         localhost
-127.0.1.1   artix.localdomain  artix
+127.0.0.1    localhost
+::1          localhost
+127.0.1.1    artix.localdomain    artix
 ```
 
-> Ensure that the entry you place inside `/etc/hostname` is the same for `127.0.1.1`
+### Root & User Accounts
 
-Create the **root** password then your user account:
+Set the root password, then create your user:
 
 ```bash
 passwd
@@ -202,56 +238,97 @@ useradd -mG wheel -s /bin/bash <name>
 passwd <name>
 ```
 
-Grant the wheel group **sudo** perms by editing the sudoers file:
+Grant the `wheel` group sudo access by editing the sudoers file:
 
 ```bash
 EDITOR=vim visudo
-
-%wheel ALL(ALL:ALL) ALL
 ```
 
-> Uncomment the wheel group
+Uncomment the following line:
 
-## Network Stuff
+```
+%wheel ALL=(ALL:ALL) ALL
+```
 
-This guide will use `iwd` as the backend for `NetworkManager`:
+---
 
-```bash
+## Network Configuration
+
+### iwd Backend for NetworkManager
+
+```ini
 # /etc/NetworkManager/conf.d/iwd.conf
 [device]
 wifi.backend=iwd
+
+# /etc/NetworkManager/conf.d/openresolv.conf
+[main]
+dns=default
+rc-manager=resolvconf
 ```
 
-Configure DNS:
+### DNS
 
-```bash
+```
 # /etc/resolvconf.conf
 name_servers="94.140.14.14 94.140.15.15"
 name_servers_append="1.1.1.1 1.0.0.1"
 ```
 
+> These use AdGuard DNS as primary and Cloudflare as fallback. Adjust to your preference.
+
+---
+
 ## GRUB & initramfs
+
+Install and configure GRUB:
 
 ```bash
 grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=GRUB
 grub-mkconfig -o /boot/grub/grub.cfg
 ```
 
-```bash
+Add the `btrfs` module to `mkinitcpio` and regenerate the initramfs:
+
+```
 # /etc/mkinitcpio.conf
 MODULES=(btrfs)
+```
 
+```bash
 mkinitcpio -P
 ```
 
+---
+
 ## Finalization
 
-Exit chroot then reboot.
-
-Once logged in to your user:
+Exit the chroot and reboot:
 
 ```bash
-dinitctl enable NetworkManager
-dinitctl enable iwd
-dinitctl enable zramen
+exit
+reboot
+```
+
+Once logged into your user account, enable the necessary services:
+
+```bash
+sudo dinitctl enable NetworkManager
+sudo dinitctl enable iwd
+```
+
+For zramen to work correctly:
+
+```json
+# /etc/dinit.d/zramen
+...
+env-file    =   /etc/dinit.d/config/zramen.conf
+```
+
+> Also comment the logfile line because zramen starts too early
+
+Then enable zramen:
+
+```bash
+sudo dinitctl enable zramen
 ```

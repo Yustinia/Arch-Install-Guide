@@ -11,7 +11,7 @@
 
 > `btrfs subvolumes` · `LUKS encryption` · `swapfile` · `zram` · `systemd`
 
-A manual Arch Linux installation with full disk encryption via LUKS, logical volume management, and a Btrfs subvolume layout for root. Uses `systemd-resolved` for DNS and `zram-generator` for zram.
+A manual Arch Linux installation with full disk encryption via LUKS, and a Btrfs subvolume layout for root. Uses `openresolv` for DNS, `zram-generator` for zram, and `iwd` + `NetworkManager` for networking.
 
 | #   | Chapter                                                          |
 | --- | ---------------------------------------------------------------- |

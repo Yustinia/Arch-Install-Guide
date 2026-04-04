@@ -21,7 +21,7 @@ Edit GRUB to include the key:
 ```ini
 # /etc/default/grub
 ...
-GRUB_CMDLINE_LINUX_DEFAULT="... cryptdevice=<UUID>:encrypted cryptkey=rootfs:/etc/encrypted.key root=/dev/mapper/encrypted"
+GRUB_CMDLINE_LINUX_DEFAULT="... cryptdevice=UUID=<UUID>:encrypted cryptkey=rootfs:/etc/encrypted.key root=/dev/mapper/encrypted"
 ...
 ```
 

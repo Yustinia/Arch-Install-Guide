@@ -6,7 +6,7 @@ Install the necessary packages using `basestrap`:
 basestrap -K /mnt \
     base linux-zen linux-zen-headers base-devel linux-firmware dinit elogind-dinit \
     git efibootmgr grub iwd iwd-dinit networkmanager networkmanager-dinit \
-    btrfs-progs vim cryptsetup cryptestup-dinit zramen zramen-dinit openresolv
+    btrfs-progs vim cryptsetup cryptestup-dinit zramen openresolv
 ```
 
 Generate the filesystem table & chroot:

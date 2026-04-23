@@ -28,7 +28,7 @@ Add the entry to fstab:
 
 ## ZRAM
 
-> This assumes that you have `zramen` & `zramen-dinit` installed
+> This assumes that you have `zramen` installed
 
 Add the following content inside `/etc/dinit.d/config/zramen.conf`:
 
@@ -41,12 +41,16 @@ ZRAM_PRIORITY=100
 
 > To allocate 65% of ram, change 50 to 65
 
-Configure `/etc/dinit.d/zramen` to include the config:
+Create `/etc/dinit.d/zramen` to write the following:
 
 ```ini
 # /etc/dinit.d/zramen
-...
-env-file     = /etc/dinit.d/config/zramen.conf
+type            = scripted
+command         = /usr/bin/zramen make
+stop-command    = /usr/bin/zramen toss
+smooth-recovery = true
+env-file        = /etc/dinit.d/config/zramen.conf
+waits-for       = pre-local.target
 ```
 
 Also comment out the logfile to ensure that zram functions properly:

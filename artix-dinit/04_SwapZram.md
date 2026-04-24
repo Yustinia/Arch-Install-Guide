@@ -52,10 +52,3 @@ smooth-recovery = true
 env-file        = /etc/dinit.d/config/zramen.conf
 waits-for       = pre-local.target
 ```
-
-Also comment out the logfile to ensure that zram functions properly:
-
-```ini
-# /etc/dinit.d/zramen
-# logfile ...
-```

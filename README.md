@@ -45,9 +45,9 @@ A manual Artix Linux installation using dinit as the init system — a systemd-f
 | 06  | [Hostname & Hosts](./artix-dinit/06_Hosts.md)                     |
 | 07  | [Users](./artix-dinit/07_Users.md)                                |
 | 08  | [Network Configuration](./artix-dinit/08_NetworkConfiguration.md) |
-| 10  | [GRUB & Initramfs](./artix-dinit/10_GRUBandInitramfs.md)          |
-| 11  | [LUKS Key](./artix-dinit/11_LUKSKey.md)                           |
-| 12  | [Post Setup](./artix-dinit/12_PostSetup.md)                       |
+| 09  | [GRUB & Initramfs](./artix-dinit/09_GRUBandInitramfs.md)          |
+| 10  | [LUKS Key](./artix-dinit/10_LUKSKey.md)                           |
+| 11  | [Post Setup](./artix-dinit/11_PostSetup.md)                       |
 
 ---
 
